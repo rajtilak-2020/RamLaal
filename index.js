@@ -13,7 +13,8 @@ const config = {
   version: process.env.MC_VERSION || false, // false enables auto-detection
   auth: process.env.MC_AUTH || 'offline',    // 'offline' for cracked Aternos servers
   reconnectDelay: parseInt(process.env.RECONNECT_DELAY_MS, 10) || 15000,
-  httpPort: process.env.PORT || 3000
+  httpPort: process.env.PORT || 3000,
+  isMuted: process.env.MUTED === 'true'
 };
 
 // ==========================================
@@ -550,7 +551,9 @@ let lastBattleCry = 0;
 let lastCreeperWarn = 0;
 let lastArmorEquipChat = 0;
 let lastEatChat = 0;
+let lastDeathRoast = 0;
 let proximityCooldowns = {};
+let isMuted = config.isMuted;
 
 // Base Anchor - RamLaal stays near base only (never leaves base perimeter)
 let baseAnchor = null;
@@ -574,6 +577,20 @@ function createBot() {
 
   bot = mineflayer.createBot(botOptions);
 
+  // Hook bot.chat to strictly respect isMuted state
+  const originalChat = bot.chat.bind(bot);
+  bot.chat = function (msg, force = false) {
+    if (isMuted && !force) {
+      console.log(`[Muted - Chat Suppressed]: ${msg}`);
+      return;
+    }
+    try {
+      originalChat(msg);
+    } catch (err) {
+      console.warn(`[Chat Error] ${err.message}`);
+    }
+  };
+
   bot.on('login', () => {
     console.log(`[Bot] Logged into ${config.host}:${config.port} successfully!`);
   });
@@ -586,8 +603,7 @@ function createBot() {
     }
   });
 
-  // Human Habit: Curious Block Placement / Building Inspection
-  let lastBuildPraise = 0;
+  // Human Habit: Curious Block Placement / Building Inspection (Silent nod)
   bot.on('blockUpdate', (oldBlock, newBlock) => {
     if (!bot || !bot.entity || bot.isSleeping || isSprintingToBed) return;
     if (!newBlock || newBlock.name === 'air') return;
@@ -601,17 +617,6 @@ function createBot() {
           bot.lookAt(newBlock.position.offset(0.5, 0.5, 0.5));
           nodHead();
         } catch (_) {}
-
-        const now = Date.now();
-        if (now - lastBuildPraise > 90000) { // 90s cooldown
-          lastBuildPraise = now;
-          const buildLines = [
-            "Arre wah! Naya block lagaya, badhiya build lag raha hai 🧱✨",
-            "Dekh raha hu mai! Architect ban rahe ho sab log 🏡 hammer emoji",
-            "Sundar design banaya hai! Base aur accha lag raha hai ab 🌸"
-          ];
-          humanChat(getRandom(buildLines));
-        }
       }, 300);
     }
   });
@@ -619,9 +624,10 @@ function createBot() {
   bot.on('spawn', () => {
     console.log('[Bot] Spawned in the world. Initializing AI perception core...');
     startMovementLoop();
-    scheduleRandomChat();
     try {
-      bot.chat("RamLaal-GPT v2.0 AI Core Loaded! Namaste sabhi ko 🤖🙏");
+      if (!isMuted) {
+        bot.chat("RamLaal AI Core Loaded! Namaste sabhi ko 🤖🙏");
+      }
     } catch (_) {}
   });
 
@@ -640,13 +646,11 @@ function createBot() {
 
   bot.on('wake', () => {
     console.log('[Bed] RamLaal woke up! Resuming movement...');
-    try {
-      bot.chat(getRandom(wakeMessages));
-    } catch (_) {}
+    // Silently wake up and resume patrol without spamming chat
     startMovementLoop();
   });
 
-  // Physical Combat Reaction (When RamLaal gets attacked)
+  // Physical Combat Reaction (When RamLaal gets attacked - silent swing)
   bot.on('entityHurt', (entity) => {
     if (!bot || !entity) return;
     if (entity === bot.entity) {
@@ -655,33 +659,27 @@ function createBot() {
         lastHurtTime = now;
         try {
           bot.swingArm('right');
-          bot.chat(getRandom(hurtMessages));
         } catch (_) {}
       }
     }
   });
 
-  // Observer AI: Roasts players when someone dies near him
+  // Observer AI: Roasts players when someone dies near him (respects mute & cooldown)
   bot.on('entityDead', (entity) => {
-    if (!bot || !entity || entity === bot.entity) return;
+    if (!bot || !entity || entity === bot.entity || isMuted) return;
     if (entity.type === 'player' && entity.username) {
-      try {
-        bot.chat(getRandom(allDeathObserverRoasts));
-      } catch (_) {}
+      const now = Date.now();
+      if (now - lastDeathRoast > 45000) {
+        lastDeathRoast = now;
+        try {
+          bot.chat(getRandom(allDeathObserverRoasts));
+        } catch (_) {}
+      }
     }
   });
 
-  // Weather Awareness
-  bot.on('rain', () => {
-    if (!bot) return;
-    try {
-      if (bot.isRaining) {
-        bot.chat("Arre baarish shuru ho gayi! Mummy pakode bana do 🌧️☕");
-      } else {
-        bot.chat("Baarish ruk gayi, chalo dhoop sekte hain ab ☀️");
-      }
-    } catch (_) {}
-  });
+  // Weather Awareness (Silent - no chat spam)
+  bot.on('rain', () => {});
 
   // In-game Chat Handling with Interactive AI
   bot.on('chat', (username, message) => {
@@ -693,7 +691,7 @@ function createBot() {
     console.log('[Bot] Bot died. Respawning...');
     stopMovementLoop();
     try {
-      bot.chat(getRandom(deathMessages));
+      if (!isMuted) bot.chat(getRandom(deathMessages));
     } catch (_) {}
     setTimeout(() => {
       if (bot) bot.respawn();
@@ -799,6 +797,51 @@ async function friendlyCrouchGreeting() {
 // ==========================================
 function handlePlayerChat(username, message) {
   const text = message.trim().toLowerCase();
+
+  // ==========================================
+  // 🔇 MUTE COMMAND (!mute, !shutup, !silent, chup, shutup, etc.)
+  // ==========================================
+  if (text === '!mute' || text === '!shutup' || text === '!silent' || text === '!quiet' ||
+      text === 'chup' || text === 'shutup' || text === 'shut up' || text === 'mute' ||
+      text.includes('chup ho ja') || text.includes('chup reh') || text === 'shh' || text === 'shhh') {
+    isMuted = true;
+    lookAtPlayer(username);
+    nodHead();
+    bot.chat(`🤐 RamLaal is now completely MUTED! Ab mai chat me kuch nahi bolunga. Unmute karne ke liye '!unmute' ya 'bol' likho.`, true);
+    return;
+  }
+
+  // ==========================================
+  // 🗣️ UNMUTE COMMAND (!unmute, !speak, !talk, bol, speak, etc.)
+  // ==========================================
+  if (text === '!unmute' || text === '!speak' || text === '!talk' || text === 'unmute' ||
+      text === 'speak' || text === 'bol' || text === 'bolo' ||
+      text.includes('bol ramlaal') || text.includes('aawaz do') || text.includes('speak up')) {
+    isMuted = false;
+    lookAtPlayer(username);
+    waveArm();
+    friendlyCrouchGreeting();
+    bot.chat(`🗣️ RamLaal is now UNMUTED! Namaste ${username} bhai, mai wapas bol sakta hu! Bolo kya seva karein? 😊✨`, true);
+    return;
+  }
+
+  // ==========================================
+  // ℹ️ STATUS COMMAND (!status)
+  // ==========================================
+  if (text === '!status') {
+    lookAtPlayer(username);
+    bot.chat(`🤖 [RamLaal Status]: Muted: ${isMuted ? 'YES 🤐 (!unmute to speak)' : 'NO 🗣️ (!mute to silence)'} | Base Anchor: ${baseAnchor ? 'Locked 🏡' : 'Not set'} | Health: ${bot.health || 20}/20 ❤️`, true);
+    return;
+  }
+
+  // ==========================================
+  // 📋 HELP COMMAND (!help or !commands)
+  // ==========================================
+  if (text === '!help' || text === '!commands') {
+    lookAtPlayer(username);
+    bot.chat(`📋 [RamLaal Commands]: !mute, !unmute, !status, !setbase, !sleep, !wake, !hug, !pat, !flower, !sing, !compliment, !twerk, !jump, !spin, !fight, !iq, !roast, !calc, !toss`, true);
+    return;
+  }
 
   // Set Base Anchor Command (!setbase, !anchor, yahan raho)
   if (text === '!setbase' || text === '!anchor' || text.includes('yahan raho') || text.includes('ye base hai') || text.includes('set base')) {
@@ -1006,7 +1049,7 @@ function handlePlayerChat(username, message) {
   // 12. Insults / Gaali / Noob / Roasts
   if (text.includes('noob') || text.includes('bot') || text.includes('chutiya') || text.includes('pagal') ||
       text.includes('bhadwe') || text.includes('gadhe') || text.includes('stupid') || text.includes('idiot') ||
-      text.includes('bkl') || text.includes('bsdk') || text.includes('lmao') || text.includes('chup') || text.includes('shut up')) {
+      text.includes('bkl') || text.includes('bsdk') || text.includes('lmao')) {
     lookAtPlayer(username);
     const roastReplies = [
       `Abe ${username}, khud to dirt ke ghar me rehta hai aur mujhe gyaan de raha hai! 🗿`,
@@ -1137,10 +1180,9 @@ async function goToSleep(silent = false) {
     console.log('[Bed] Attempting to sleep in bed...');
     await bot.sleep(bed);
     console.log('[Bed] RamLaal is now sleeping in bed!');
-    bot.chat(getRandom(sleepMessages));
   } catch (err) {
     console.warn(`[Bed Error] ${err.message}`);
-    if (!silent) bot.chat(`Abe so nahi pa raha hu: ${err.message}`);
+    if (!silent && !isMuted) bot.chat(`Abe so nahi pa raha hu: ${err.message}`);
     if (!bot.isSleeping) {
       startMovementLoop();
     }
@@ -1236,19 +1278,11 @@ function checkPlayerProximity() {
       // Check if the distant player is looking in RamLaal's direction!
       if (isPlayerLookingAtBot(player.entity)) {
         const lastEyeContact = proximityCooldowns['eye_' + player.username] || 0;
-        if (now - lastEyeContact > 70000) { // 70s cooldown per player
+        if (now - lastEyeContact > 25000) { // 25s cooldown per player
           proximityCooldowns['eye_' + player.username] = now;
           lookAtPlayer(player.username);
           waveArm();
           nodHead();
-          const eyeContactLines = [
-            `Arey ${player.username}! Door se kya dekh rahe ho, aao aao paas aao! 👋`,
-            `Dekh liya maine ${player.username} bhai! Handsome lag raha hu na aaj? 😎✨`,
-            `Yo ${player.username}! Door se hi namaste! Kaisi chal rahi hai mining? 👋`,
-            `Aise kya ghoor rahe ho ${player.username} babu? Autograph chahiye kya RamLaal ka? 😂`,
-            `Hello ${player.username}! Base ekdum safe hai, fikar mat karo! 🏡🌸`
-          ];
-          try { bot.chat(getRandom(eyeContactLines)); } catch (_) {}
           continue;
         }
       }
@@ -1257,34 +1291,22 @@ function checkPlayerProximity() {
     // 2. WELCOME HOME REACTION (Player returns from mining/exploring to base)
     if (prevDist > 14 && dist <= 5.5) {
       const lastWelcome = proximityCooldowns['welcome_' + player.username] || 0;
-      if (now - lastWelcome > 90000) { // 90s cooldown per player
+      if (now - lastWelcome > 45000) { // 45s cooldown per player
         proximityCooldowns['welcome_' + player.username] = now;
         lookAtPlayer(player.username);
         friendlyCrouchGreeting();
         waveArm();
-        const welcomeLines = [
-          `Yay! ${player.username} wapas aa gaye! Maine base ka bohot dhyan rakha! Welcome home! 🥰✨`,
-          `Arey dekho kaun aaya! Welcome back ${player.username}! Tumhare bina base kitna soona tha! 🏡💖`,
-          `Hamara hero wapas aa gaya! Welcome back ${player.username}! Kaisi rahi mining? ⛏️❤️`
-        ];
-        try { bot.chat(getRandom(welcomeLines)); } catch (_) {}
         continue;
       }
     }
 
-    // 3. CLOSE FRIENDLY GREETING (< 2.2 blocks: crouch & wave)
+    // 3. CLOSE FRIENDLY GREETING (< 2.2 blocks: crouch & look)
     if (dist < 2.2) {
       const lastSpoken = proximityCooldowns[player.username] || 0;
-      if (now - lastSpoken > 40000) { // 40s cooldown per player
+      if (now - lastSpoken > 30000) { // 30s cooldown per player
         proximityCooldowns[player.username] = now;
         lookAtPlayer(player.username);
         friendlyCrouchGreeting();
-        const cuteStareLines = [
-          `Hello ${player.username}! Kaise ho aap? RamLaal is happy to see you! 🥰✨`,
-          `Arey ${player.username}! Itne paas aaye ho toh ek high-five de do! ✋💖`,
-          `Kya haal chaal ${player.username}? Dekho mai base ka mast guard ban ke khada hu! 🌸`
-        ];
-        try { bot.chat(getRandom(cuteStareLines)); } catch (_) {}
       }
     }
   }
@@ -1343,18 +1365,7 @@ async function autoEquipArmor() {
     if (shield) { await bot.equip(shield, 'off-hand'); equippedSomething = true; }
   } catch (_) {}
 
-  if (equippedSomething) {
-    const now = Date.now();
-    if (now - lastArmorEquipChat > 45000) {
-      lastArmorEquipChat = now;
-      const armorLines = [
-        "Armor pehan liya! Ab RamLaal poora base warrior ban gaya 🛡️✨",
-        "Khatarnak gear mil gaya! Ab koi mob base me ghus ke dikhaye 🗿⚔️",
-        "Iron Man bana diya tumne mujhe! Shandaar armor hai!"
-      ];
-      try { bot.chat(getRandom(armorLines)); } catch (_) {}
-    }
-  }
+  // Armor equipped silently - no chat spam
 }
 
 // Auto-eat food when health is low
@@ -1368,11 +1379,6 @@ async function autoEatFood() {
   try {
     isEating = true;
     await bot.equip(food, 'hand');
-    const now = Date.now();
-    if (now - lastEatChat > 30000) {
-      lastEatChat = now;
-      bot.chat("Thoda khaana kha ke health badha raha hu... 🍖");
-    }
     await bot.consume();
   } catch (_) {}
   finally {
@@ -1381,7 +1387,7 @@ async function autoEatFood() {
   }
 }
 
-// Combat loop: detects nearby mobs, attacks them, retreats from creepers
+// Combat loop: detects nearby mobs, attacks them, retreats from creepers (silent defense)
 async function checkCombatAndMobs() {
   if (!bot || !bot.entity || bot.isSleeping || isEating) return;
 
@@ -1402,14 +1408,8 @@ async function checkCombatAndMobs() {
 
   if (!nearestHostile) return;
 
-  const now = Date.now();
-
   // 1. CREEPER TACTICAL RETREAT (Don't let base blow up!)
   if (nearestHostile.name === 'creeper') {
-    if (now - lastCreeperWarn > 8000) {
-      lastCreeperWarn = now;
-      bot.chat("Abe Creeper phootne wala hai! Piche hato sab! 💥🏃");
-    }
     // Run backward / away from creeper
     const dx = nearestHostile.position.x - bot.entity.position.x;
     const dz = nearestHostile.position.z - bot.entity.position.z;
@@ -1432,16 +1432,6 @@ async function checkCombatAndMobs() {
     bot.lookAt(nearestHostile.position.offset(0, nearestHostile.height * 0.8, 0));
     bot.attack(nearestHostile);
     bot.swingArm('right');
-
-    if (now - lastBattleCry > 7000) {
-      lastBattleCry = now;
-      const battleCries = [
-        `Abe ${nearestHostile.name} teri aisi taisi! Base me kyu aaya?! ⚔️`,
-        `Mar saale ${nearestHostile.name}! RamLaal ke ilaake me aane ki himmat kaise hui! 🥊`,
-        `Base guard RamLaal on duty! Ek thappad me dher kar dunga! 🗿💥`
-      ];
-      try { bot.chat(getRandom(battleCries)); } catch (_) {}
-    }
   }
 }
 
@@ -1453,15 +1443,17 @@ async function checkCombatAndMobs() {
 
 
 // Realistic Human Typing Simulation: Pauses naturally based on message length before sending
-async function humanChat(message, lookAtTarget = null) {
+async function humanChat(message, lookAtTarget = null, force = false) {
   if (!bot || !message) return;
+  if (isMuted && !force) return;
   if (lookAtTarget) lookAtPlayer(lookAtTarget);
 
   // Realistic human typing delay (400ms to 1800ms)
   const typingMs = Math.min(1800, Math.max(500, message.length * 25));
   await sleep(typingMs);
+  if (isMuted && !force) return;
   try {
-    bot.chat(message);
+    bot.chat(message, force);
   } catch (_) {}
 }
 
@@ -1568,10 +1560,9 @@ async function sprintToBedAndSleep() {
 
   if (!bed) {
     const now = Date.now();
-    if (now - lastSleepAttempt > 25000) {
+    if (now - lastSleepAttempt > 30000) {
       lastSleepAttempt = now;
       console.log('[Bed] No bed found within 18 blocks.');
-      try { bot.chat(getRandom(noBedMessages)); } catch (_) {}
     }
     return;
   }
@@ -1579,14 +1570,7 @@ async function sprintToBedAndSleep() {
   isSprintingToBed = true;
   stopMovementLoop();
 
-  console.log(`[Bed Rush] Night arrived! Sprinting at full speed to bed at ${bed.position}...`);
-
-  const rushLines = [
-    "Raat ho gayi! Bed ki taraf full speed me sprint maaro! 🏃💨🛌",
-    "Bedtime sprint activated! Sabse pehle RamLaal bistar me pahuchega! 🌙💨",
-    "Raat ho gayi dosto, koi raste me mat aana! Full sprint mode! 🏃‍♂️💨✨"
-  ];
-  try { bot.chat(getRandom(rushLines)); } catch (_) {}
+  console.log(`[Bed Rush] Night arrived! Sprinting silently to bed at ${bed.position}...`);
 
   let ticks = 0;
   const maxSprintTicks = 45; // ~4.5 seconds max
@@ -1608,7 +1592,6 @@ async function sprintToBedAndSleep() {
       try {
         console.log('[Bed Rush] Reached bed! Hopping in now...');
         await bot.sleep(bed);
-        bot.chat(getRandom(sleepMessages));
       } catch (err) {
         console.warn(`[Bed Rush Error] ${err.message}`);
         if (!bot.isSleeping) startMovementLoop();
@@ -1776,19 +1759,11 @@ function stopMovementLoop() {
 }
 
 function scheduleRandomChat() {
-  if (randomChatTimeout) clearTimeout(randomChatTimeout);
-
-  // Random time between 2.5 minutes (150s) and 5.5 minutes (330s)
-  const delay = Math.floor(Math.random() * (330000 - 150000 + 1)) + 150000;
-
-  randomChatTimeout = setTimeout(() => {
-    if (bot && bot.entity && !bot.isSleeping) {
-      try {
-        bot.chat(getRandom(allRandomBanterMessages));
-      } catch (_) {}
-    }
-    scheduleRandomChat();
-  }, delay);
+  // Disabled: No unprompted random chat spam
+  if (randomChatTimeout) {
+    clearTimeout(randomChatTimeout);
+    randomChatTimeout = null;
+  }
 }
 
 function cleanupTimers() {

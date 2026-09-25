@@ -3,33 +3,43 @@
 
 ────────────────────────────────────────────
 
-### 🛌 1. SLEEP & SKIP NIGHT (Instant Bed Sprint)
+### 🛌 1. SLEEP & SKIP NIGHT (Silent Instant Bed Sprint)
 * `!sleep` (or `soja`) ➔ RamLaal sprints at full speed to his bed and hops in to skip the night!
 * `!wake` (or `uth ja`) ➔ Wakes RamLaal up from his bed.
-> **Note:** The exact second night arrives, he automatically sprints to bed on his own too!
+> **Note:** The exact millisecond night arrives, he automatically sprints to bed on his own silently (zero chat spam, peaceful night skip)!
 
 ────────────────────────────────────────────
 
-### 🧍‍♂️ 2. BODY-LANGUAGE MIRRORING (He Copies You!)
+### 🔇 2. MUTE & UNMUTE CHAT CONTROLS (NEW!)
+* `!mute` (or `chup`, `shutup`, `!silent`) ➔ **Completely MUTES RamLaal!**
+  * He will stay 100% silent in chat while still dancing, doing twerks, hugs, and guarding base!
+* `!unmute` (or `bol`, `!speak`, `speak`) ➔ **UNMUTES RamLaal!**
+  * Makes him speak, chat, and answer questions again!
+* `!status` ➔ Shows if RamLaal is currently Muted or Speaking, base status, and HP.
+* `!help` ➔ Shows quick command list in Minecraft chat.
+
+────────────────────────────────────────────
+
+### 🧍‍♂️ 3. BODY-LANGUAGE MIRRORING (He Copies You!)
 * **Crouch:** Walk up to RamLaal and **CROUCH** ➔ He immediately crouches back like a real player!
 * **Jump:** Hop in front of him ➔ He does a happy hop with you!
 * **Arm Swing:** Swing your arm at him ➔ He gives you a friendly arm wave back!
 
 ────────────────────────────────────────────
 
-### 👀 3. DISTANT VISION & EYE-CONTACT GREETINGS
+### 👀 4. DISTANT VISION & EYE-CONTACT RECOGNITION
 * **Watching from Far:** When you are working 10–20 blocks away, RamLaal smoothly turns his head to watch you like a curious friend.
-* **Eye-Contact Greeting:** If you aim your crosshair directly at him from far away, he detects your gaze, waves, nods, and drops a casual greeting in chat!
+* **Eye-Contact Recognition:** If you aim your crosshair directly at him from far away, he detects your gaze, waves, and nods back at you!
 
 ────────────────────────────────────────────
 
-### 🧱 4. CURIOUS BUILDING INSPECTION
+### 🧱 5. CURIOUS BUILDING INSPECTION
 * Whenever you place blocks near him (within 5 blocks):
-  * He hears the block place, turns his head toward your new block, inspects it, and compliments your architecture!
+  * He hears the block place, turns his head toward your new block, and nods in approval!
 
 ────────────────────────────────────────────
 
-### 🥰 5. CUTE & WHOLESOME COMMANDS
+### 🥰 6. CUTE & WHOLESOME COMMANDS
 Type these in normal chat to interact with him:
 * `!hug` (or `gale mil`, `pyaar`) ➔ Gives you a big warm virtual hug! 🤗❤️
 * `!pat` (or `headpat`, `pucho`) ➔ Nods happily and purrs from the headpat! 🥰🐾
@@ -40,7 +50,7 @@ Type these in normal chat to interact with him:
 
 ────────────────────────────────────────────
 
-### 🕺 6. FUN MOVES & DANCES
+### 🕺 7. FUN MOVES & DANCES
 * `!twerk` (or `mujra`) ➔ RamLaal twerks up and down! 💃
 * `!jump` (or `dance`) ➔ Jumps with joy! 🕺
 * `!spin` (or `beyblade`) ➔ Spins 360 degrees! 🌪️
@@ -48,7 +58,7 @@ Type these in normal chat to interact with him:
 
 ────────────────────────────────────────────
 
-### 🧠 7. AI MINI-GAMES & CHAT ROASTS
+### 🧠 8. AI MINI-GAMES & CHAT ROASTS (When Unmuted)
 * `!iq` ➔ Scans your brain and gives your Minecraft IQ! 🧠
 * `!roast <player>` (or `roast me`) ➔ Drops a savage roast in chat! 🔥
 * `!shayari` ➔ Recites hilarious Desi Minecraft poetry! 📜
@@ -58,8 +68,8 @@ Type these in normal chat to interact with him:
 
 ────────────────────────────────────────────
 
-### 💬 8. TALK TO HIM NATURALLY IN CHAT
-RamLaal understands natural talk and replies directly while looking at you:
+### 💬 9. TALK TO HIM NATURALLY IN CHAT
+When unmuted, RamLaal understands natural talk and replies directly while looking at you:
 * Say `hi` / `hello` / `kaisa hai` ➔ Friendly greetings.
 * Say `ramlaal` ➔ Asks what you need.
 * Call him a `noob` or `bot` ➔ He roasts your dirt house and your PvP skills!

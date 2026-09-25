@@ -43,28 +43,48 @@ human mouse physics!
 
 
 --------------------------------------------------------------------------------
-👀 4. DISTANT VISION & EYE-CONTACT GREETINGS
+👀 4. DISTANT VISION & EYE-CONTACT RECOGNITION
 --------------------------------------------------------------------------------
 • Watching from afar (6 to 22 blocks):
   ➔ While patrolling, RamLaal notices players walking in the distance and
-     smoothly turns his head to watch them.
-• Eye-Contact Greeting:
+     smoothly turns his head to watch them like a curious friend.
+• Eye-Contact Recognition:
   ➔ When you look directly at him with your crosshair from afar, he senses
-     your gaze, waves, nods, and drops a casual greeting in chat!
+     your gaze, waves his arm, and nods back at you! (100% silent & realistic)
 
 
 --------------------------------------------------------------------------------
-🏃‍♂️ 5. INSTANT NIGHT BED SPRINT
+🏃‍♂️ 5. INSTANT SILENT NIGHT BED SPRINT
 --------------------------------------------------------------------------------
 • The exact millisecond night falls, RamLaal detects it instantly.
 • He scans for his bed up to 18 blocks away.
 • He SPRINTS AT FULL SPEED directly to his bed and auto-jumps over any steps!
 • The moment he reaches the bed (< 3 blocks), he dives right in and skips the
   night for everyone!
+• Completely silent: Zero goodnight or goodmorning chat spam! Peaceful sleep.
 
 
 --------------------------------------------------------------------------------
-🥰 6. WHOLESOME & CUTE COMMANDS
+🔇 6. MUTE & UNMUTE CHAT CONTROLS (NEW!)
+--------------------------------------------------------------------------------
+Want total silence in the chat, or ready to chat again? Use these:
+
+• !mute (or "chup", "shutup", "!silent")
+  ➔ Completely MUTES RamLaal from saying anything in chat!
+     He stays 100% quiet while still performing dances, hugs, and base guarding.
+
+• !unmute (or "bol", "!speak", "speak", "!talk")
+  ➔ UNMUTES RamLaal! He can now speak, roast, and reply to you in chat again.
+
+• !status
+  ➔ Checks whether RamLaal is currently Muted or Speaking, base status, and HP.
+
+• !help (or !commands)
+  ➔ Lists available commands right in your Minecraft chat.
+
+
+--------------------------------------------------------------------------------
+🥰 7. WHOLESOME & CUTE COMMANDS
 --------------------------------------------------------------------------------
 Type these in public chat to interact with him:
 
@@ -77,7 +97,7 @@ Type these in public chat to interact with him:
 
 
 --------------------------------------------------------------------------------
-🕺 7. FUN MOVES & AI MINI-GAMES
+🕺 8. FUN MOVES & AI MINI-GAMES
 --------------------------------------------------------------------------------
 • !twerk (or "mujra")    ➔ Twerks up and down! 💃
 • !jump (or "dance")     ➔ Hops with joy! 🕺
