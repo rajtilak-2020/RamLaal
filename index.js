@@ -20,21 +20,18 @@ const config = {
 // ==========================================
 
 const sleepMessages = [
-  "Bohot majduri ho gayi aaj ki, RamLaal chala sone! 😴🛌",
-  "Abe itni raat ho gayi, bhoot aane se pehle bistar me ghuso sab!",
-  "Chalo sab so jao chupchaap, kal fir subah se grinding karni hai 🌙",
-  "RamLaal is taking a power nap. Disturb kiya toh axe se marunga! 🪓",
-  "Goodnight bhaiyon, sapne me Netherite dhoondhta hu tab tak 💤",
-  "Abe so jao sab, bhoot ghoom rahe hain bahar 👻",
-  "System shutting down for sleep mode... RamLaal-GPT will reboot at dawn. ⚡"
+  "Bohot pyaari neend aa rahi hai... RamLaal chala sone! Goodnight everyone! 🧸🛌💤",
+  "Chalo bedtime ho gaya sabka! Sweet dreams dosto, bhoot se bachke rehna 🌙✨",
+  "Bohot thak gaya aaj base ki dekhbhal karke... Ab RamLaal bed me cuddle karega 🥰",
+  "Kisi ke paas teddy bear hai kya? Chalo goodnight, sapne me diamond dhoondhenge! 💤",
+  "Goodnight family! Kal subah uthke mast naya adventure karenge 🌸😴"
 ];
 
 const wakeMessages = [
-  "Uth gaya re baba! Subah ho gayi, chai kaun bana raha hai? ☕",
-  "Chalo utho aalsiyon! Firse wahi 24/7 walking ki majduri shuru! ☀️",
-  "Morning ho gayi mamu! Kaam dhandhe pe lago sab!",
-  "Arre kisne subah subah bed se utha diya mujhe?! 🥱",
-  "RamLaal-GPT AI Engine v2.0 online! Server pe koi hoshiyari nahi karega ab 🗿"
+  "Good morning sunshine! ☀️🌸 Uth gaya RamLaal, fresh and ready! Chai kaun bana raha hai? ☕",
+  "Subah ho gayi dosto! Aaj ka din bohot pyara hone wala hai! Yay! ✨🥰",
+  "Morning morning! Utho sab jaldi, dekho bahar kitna sundar mausam hai! 🌅",
+  "RamLaal is awake! Sabhi pyare players ko RamLaal ki taraf se good morning! 💖"
 ];
 
 const noBedMessages = [
@@ -539,13 +536,23 @@ server.listen(config.httpPort, () => {
 
 let bot = null;
 let movementInterval = null;
+let combatInterval = null;
 let reconnectTimeout = null;
 let randomChatTimeout = null;
 let isTryingToSleep = false;
+let isEating = false;
 let lastSleepAttempt = 0;
 let lastHurtTime = 0;
 let lastProximityCheck = 0;
+let lastBattleCry = 0;
+let lastCreeperWarn = 0;
+let lastArmorEquipChat = 0;
+let lastEatChat = 0;
 let proximityCooldowns = {};
+
+// Base Anchor - RamLaal stays near base only (never leaves base perimeter)
+let baseAnchor = null;
+const BASE_PATROL_RADIUS = 7; // Max distance in blocks from base center
 
 function createBot() {
   cleanupTimers();
@@ -567,6 +574,14 @@ function createBot() {
 
   bot.on('login', () => {
     console.log(`[Bot] Logged into ${config.host}:${config.port} successfully!`);
+  });
+
+  // Auto-detect when RamLaal is teleported (e.g. /tp) and lock new base anchor
+  bot.on('forcedMove', () => {
+    if (bot && bot.entity) {
+      baseAnchor = bot.entity.position.clone();
+      console.log(`[Base Guard] Teleport detected via forcedMove! Base anchor reset to: ${baseAnchor.floored()}`);
+    }
   });
 
   bot.on('spawn', () => {
@@ -718,11 +733,123 @@ async function doPunch() {
   }
 }
 
+// Human-like animation: Waving friendly arm
+async function waveArm() {
+  if (!bot || bot.isSleeping) return;
+  for (let i = 0; i < 3; i++) {
+    bot.swingArm('right');
+    await sleep(200);
+  }
+}
+
+// Human-like animation: Nodding head yes
+async function nodHead() {
+  if (!bot || !bot.entity || bot.isSleeping) return;
+  const originalPitch = bot.entity.pitch;
+  try {
+    bot.look(bot.entity.yaw, originalPitch + 0.4, true);
+    await sleep(150);
+    bot.look(bot.entity.yaw, originalPitch - 0.4, true);
+    await sleep(150);
+    bot.look(bot.entity.yaw, originalPitch, true);
+  } catch (_) {}
+}
+
+// Human-like animation: Universal Minecraft friendly crouch-greeting
+async function friendlyCrouchGreeting() {
+  if (!bot || bot.isSleeping) return;
+  for (let i = 0; i < 3; i++) {
+    bot.setControlState('sneak', true);
+    await sleep(180);
+    if (!bot) return;
+    bot.setControlState('sneak', false);
+    await sleep(180);
+  }
+}
+
+
 // ==========================================
 // 🗣️ INTERACTIVE AI CHAT & COMMAND PROCESSOR
 // ==========================================
 function handlePlayerChat(username, message) {
   const text = message.trim().toLowerCase();
+
+  // Set Base Anchor Command (!setbase, !anchor, yahan raho)
+  if (text === '!setbase' || text === '!anchor' || text.includes('yahan raho') || text.includes('ye base hai') || text.includes('set base')) {
+    lookAtPlayer(username);
+    if (bot && bot.entity) {
+      baseAnchor = bot.entity.position.clone();
+      waveArm();
+      bot.chat(`Theek hai ${username} bhai! Ye mera naya base spot hai. Ab mai yahin ghoomunga aur base ki shaan banunga 🏡📍✨`);
+    }
+    return;
+  }
+
+  // Adorable: Hug command
+  if (text === '!hug' || text.includes('hug') || text.includes('gale mil') || text.includes('pyaar') || text.includes('love u') || text.includes('love you')) {
+    lookAtPlayer(username);
+    friendlyCrouchGreeting();
+    waveArm();
+    const hugReplies = [
+      `Awww! Badi wali warm virtual hug for you, ${username}! 🤗❤️ RamLaal loves you!`,
+      `*Big warm hug* 🤗✨ Tum sabse pyare player ho ${username}!`,
+      `Arey aao gale lago ${username} bhai! Dil khush kar diya tumne! ❤️🥰`
+    ];
+    bot.chat(getRandom(hugReplies));
+    return;
+  }
+
+  // Adorable: Headpat command
+  if (text === '!pat' || text.includes('pat') || text.includes('headpat') || text.includes('pucho')) {
+    lookAtPlayer(username);
+    nodHead();
+    const patReplies = [
+      `Hehe tickles! *happy purring sounds* Thank you for the headpat, ${username}! 🥰✨`,
+      `Awww thank you ${username}! RamLaal feels so loved right now! 🐾💖`,
+      `Yay headpats! *wags imaginary tail* Tum kitne acche ho! 🥰`
+    ];
+    bot.chat(getRandom(patReplies));
+    return;
+  }
+
+  // Adorable: Flower gift command
+  if (text === '!flower' || text.includes('flower') || text.includes('phool') || text.includes('gift')) {
+    lookAtPlayer(username);
+    waveArm();
+    const flowerReplies = [
+      `Ye lo ${username}! Ek pyara sa virtual phool tumhare liye 🌸🌼 Khush raho hamesha!`,
+      `Tumhare liye ek sundar red rose 🌹 Kyunki tum base ke sabse acche dost ho!`,
+      `Special flower delivery for ${username}! 🌻✨ Enjoy karo!`
+    ];
+    bot.chat(getRandom(flowerReplies));
+    return;
+  }
+
+  // Adorable: Singing command
+  if (text === '!sing' || text.includes('sing') || text.includes('gaana') || text.includes('song')) {
+    lookAtPlayer(username);
+    doJump();
+    const songs = [
+      `Lala lala lori, Minecraft ki katori! Steve chala mine me, RamLaal base ki shaan hai! 🎶🎤`,
+      `Chhoti si aasha, dher saare diamonds! RamLaal gaata hai sabke liye pyaar se! 🎵✨`,
+      `Twinkle twinkle little star, tum sab log ho superstar! 🌟🎶`
+    ];
+    bot.chat(getRandom(songs));
+    return;
+  }
+
+  // Adorable: Sweet compliments
+  if (text === '!compliment' || text.includes('tareef')) {
+    lookAtPlayer(username);
+    nodHead();
+    const sweetLines = [
+      `Tumhara character skin kitna cute lag raha hai aaj ${username}! Sachhi! ✨`,
+      `${username}, tum is pure server ke sabse pyare aur mehnati player ho! 💖`,
+      `Agar Minecraft me 'Best Player Award' hota toh pakka ${username} ko milta! 🏆🥰`
+    ];
+    bot.chat(getRandom(sweetLines));
+    return;
+  }
 
   // 1. Sleep & Wake Commands
   if (text === '!sleep' || text === 'sleep' || text === 'soja' || text === 'soja ramlaal' || text === 'so ja') {
@@ -996,32 +1123,241 @@ async function goToSleep(silent = false) {
   }
 }
 
+// Track player distances to trigger adorable "Welcome Home" reactions
+const playerLastDistance = {};
+
 function checkPlayerProximity() {
   if (!bot || !bot.entity || bot.isSleeping) return;
   const now = Date.now();
-  if (now - lastProximityCheck < 4000) return; // check every 4 seconds
+  if (now - lastProximityCheck < 3000) return; // check every 3 seconds
   lastProximityCheck = now;
 
   for (const player of Object.values(bot.players)) {
     if (!player || !player.entity || player.username === bot.username) continue;
     const dist = bot.entity.position.distanceTo(player.entity.position);
+    const prevDist = playerLastDistance[player.username] || dist;
+    playerLastDistance[player.username] = dist;
 
-    // Player standing closer than 1.8 blocks
-    if (dist < 1.8) {
+    // ADORABLE: Welcome Home Reaction (Player returns from mining/exploring to base)
+    if (prevDist > 14 && dist <= 5.5) {
+      const lastWelcome = proximityCooldowns['welcome_' + player.username] || 0;
+      if (now - lastWelcome > 90000) { // 90s cooldown per player
+        proximityCooldowns['welcome_' + player.username] = now;
+        lookAtPlayer(player.username);
+        friendlyCrouchGreeting();
+        waveArm();
+        const welcomeLines = [
+          `Yay! ${player.username} wapas aa gaye! Maine base ka bohot dhyan rakha! Welcome home! 🥰✨`,
+          `Arey dekho kaun aaya! Welcome back ${player.username}! Tumhare bina base kitna soona tha! 🏡💖`,
+          `Hamara hero wapas aa gaya! Welcome back ${player.username}! Kaisi rahi mining? ⛏️❤️`
+        ];
+        try { bot.chat(getRandom(welcomeLines)); } catch (_) {}
+        continue;
+      }
+    }
+
+    // Friendly greeting when standing close (crouch & wave)
+    if (dist < 2.2) {
       const lastSpoken = proximityCooldowns[player.username] || 0;
-      if (now - lastSpoken > 35000) { // 35s cooldown per player
+      if (now - lastSpoken > 40000) { // 40s cooldown per player
         proximityCooldowns[player.username] = now;
         lookAtPlayer(player.username);
-        const stareLines = [
-          `Abe ${player.username}, itne paas kyu aa raha hai? Social distancing bhool gaya kya? 👀`,
-          `Personal space naam ki cheez hoti hai ${player.username} bhai! Piche hat thoda! ✋`,
-          `Kya ghoor raha hai ${player.username}? Autograph chahiye kya RamLaal ka? 🗿`,
-          `Itna chipak ke kyu khada hai ${player.username}? Pocket marne ka plan hai kya? 😂`
+        friendlyCrouchGreeting();
+        const cuteStareLines = [
+          `Hello ${player.username}! Kaise ho aap? RamLaal is happy to see you! 🥰✨`,
+          `Arey ${player.username}! Itne paas aaye ho toh ek high-five de do! ✋💖`,
+          `Kya haal chaal ${player.username}? Dekho mai base ka mast guard ban ke khada hu! 🌸`
         ];
-        try {
-          bot.chat(getRandom(stareLines));
-        } catch (_) {}
+        try { bot.chat(getRandom(cuteStareLines)); } catch (_) {}
       }
+    }
+  }
+}
+
+
+// ==========================================
+// 🛡️ SMART BASE GUARD & SURVIVAL AI
+// ==========================================
+
+const HOSTILE_MOBS = new Set([
+  'zombie', 'skeleton', 'spider', 'cave_spider', 'creeper',
+  'drowned', 'husk', 'phantom', 'witch', 'slime', 'magma_cube',
+  'pillager', 'vindicator', 'ravager'
+]);
+
+const FOOD_NAMES = new Set([
+  'bread', 'cooked_beef', 'cooked_porkchop', 'cooked_mutton',
+  'cooked_chicken', 'baked_potato', 'apple', 'golden_apple',
+  'cookie', 'cooked_salmon', 'cooked_cod', 'carrot'
+]);
+
+// Auto-equip best weapon (sword or axe)
+async function equipBestWeapon() {
+  if (!bot || !bot.inventory) return;
+  const weapon = bot.inventory.items().find(i => i.name.endsWith('_sword') || i.name.endsWith('_axe'));
+  if (weapon) {
+    try {
+      await bot.equip(weapon, 'hand');
+    } catch (_) {}
+  }
+}
+
+// Auto-equip armor pieces and shield if available in inventory
+async function autoEquipArmor() {
+  if (!bot || !bot.inventory || bot.isSleeping) return;
+  const items = bot.inventory.items();
+
+  const helmet = items.find(i => i.name.endsWith('_helmet'));
+  const chest = items.find(i => i.name.endsWith('_chestplate'));
+  const legs = items.find(i => i.name.endsWith('_leggings'));
+  const boots = items.find(i => i.name.endsWith('_boots'));
+  const shield = items.find(i => i.name === 'shield');
+
+  let equippedSomething = false;
+  try {
+    if (helmet) { await bot.equip(helmet, 'head'); equippedSomething = true; }
+    if (chest) { await bot.equip(chest, 'torso'); equippedSomething = true; }
+    if (legs) { await bot.equip(legs, 'legs'); equippedSomething = true; }
+    if (boots) { await bot.equip(boots, 'feet'); equippedSomething = true; }
+    if (shield) { await bot.equip(shield, 'off-hand'); equippedSomething = true; }
+  } catch (_) {}
+
+  if (equippedSomething) {
+    const now = Date.now();
+    if (now - lastArmorEquipChat > 45000) {
+      lastArmorEquipChat = now;
+      const armorLines = [
+        "Armor pehan liya! Ab RamLaal poora base warrior ban gaya 🛡️✨",
+        "Khatarnak gear mil gaya! Ab koi mob base me ghus ke dikhaye 🗿⚔️",
+        "Iron Man bana diya tumne mujhe! Shandaar armor hai!"
+      ];
+      try { bot.chat(getRandom(armorLines)); } catch (_) {}
+    }
+  }
+}
+
+// Auto-eat food when health is low
+async function autoEatFood() {
+  if (!bot || !bot.inventory || isEating || bot.isSleeping) return;
+  if (bot.health >= 16) return; // Only eat when hurt (under 8 hearts)
+
+  const food = bot.inventory.items().find(i => FOOD_NAMES.has(i.name));
+  if (!food) return;
+
+  try {
+    isEating = true;
+    await bot.equip(food, 'hand');
+    const now = Date.now();
+    if (now - lastEatChat > 30000) {
+      lastEatChat = now;
+      bot.chat("Thoda khaana kha ke health badha raha hu... 🍖");
+    }
+    await bot.consume();
+  } catch (_) {}
+  finally {
+    isEating = false;
+    equipBestWeapon();
+  }
+}
+
+// Combat loop: detects nearby mobs, attacks them, retreats from creepers
+async function checkCombatAndMobs() {
+  if (!bot || !bot.entity || bot.isSleeping || isEating) return;
+
+  // Find nearest hostile mob within 5.5 blocks
+  let nearestHostile = null;
+  let nearestDist = 5.5;
+
+  for (const entity of Object.values(bot.entities)) {
+    if (!entity || entity === bot.entity) continue;
+    if (HOSTILE_MOBS.has(entity.name)) {
+      const dist = bot.entity.position.distanceTo(entity.position);
+      if (dist < nearestDist) {
+        nearestDist = dist;
+        nearestHostile = entity;
+      }
+    }
+  }
+
+  if (!nearestHostile) return;
+
+  const now = Date.now();
+
+  // 1. CREEPER TACTICAL RETREAT (Don't let base blow up!)
+  if (nearestHostile.name === 'creeper') {
+    if (now - lastCreeperWarn > 8000) {
+      lastCreeperWarn = now;
+      bot.chat("Abe Creeper phootne wala hai! Piche hato sab! 💥🏃");
+    }
+    // Run backward / away from creeper
+    const dx = nearestHostile.position.x - bot.entity.position.x;
+    const dz = nearestHostile.position.z - bot.entity.position.z;
+    const yawAway = Math.atan2(dx, dz); // away direction
+    bot.look(yawAway, 0, true);
+    bot.setControlState('forward', true);
+    bot.setControlState('sprint', true);
+    setTimeout(() => {
+      if (bot) {
+        bot.setControlState('forward', false);
+        bot.setControlState('sprint', false);
+      }
+    }, 1200);
+    return;
+  }
+
+  // 2. ATTACK HOSTILE MOB (Zombie, Skeleton, Spider, etc.)
+  if (nearestDist <= 4.0) {
+    await equipBestWeapon();
+    bot.lookAt(nearestHostile.position.offset(0, nearestHostile.height * 0.8, 0));
+    bot.attack(nearestHostile);
+    bot.swingArm('right');
+
+    if (now - lastBattleCry > 7000) {
+      lastBattleCry = now;
+      const battleCries = [
+        `Abe ${nearestHostile.name} teri aisi taisi! Base me kyu aaya?! ⚔️`,
+        `Mar saale ${nearestHostile.name}! RamLaal ke ilaake me aane ki himmat kaise hui! 🥊`,
+        `Base guard RamLaal on duty! Ek thappad me dher kar dunga! 🗿💥`
+      ];
+      try { bot.chat(getRandom(battleCries)); } catch (_) {}
+    }
+  }
+}
+
+
+// Smart forward movement with automatic wall/stuck detection and evasion
+async function smartStepForward(durationMs = 700) {
+  if (!bot || !bot.entity || bot.isSleeping) return;
+
+  const startPos = bot.entity.position.clone();
+  bot.setControlState('forward', true);
+  await sleep(durationMs);
+  if (!bot) return;
+  bot.setControlState('forward', false);
+
+  const movedDist = startPos.distanceTo(bot.entity.position);
+
+  // If bot moved less than 0.15 blocks in durationMs, he is stuck against a wall or obstacle!
+  if (movedDist < 0.15) {
+    // 1. Try a small hop (in case it's a 1-block elevation or slab)
+    bot.setControlState('jump', true);
+    bot.setControlState('forward', true);
+    await sleep(350);
+    if (!bot) return;
+    bot.setControlState('jump', false);
+    bot.setControlState('forward', false);
+
+    // If still stuck against a solid wall
+    if (startPos.distanceTo(bot.entity.position) < 0.25) {
+      // Step backward away from the wall
+      bot.setControlState('back', true);
+      await sleep(400);
+      if (!bot) return;
+      bot.setControlState('back', false);
+
+      // Turn 90 to 180 degrees away from the wall
+      const turnAngle = (Math.PI * 0.5) + (Math.random() * Math.PI * 0.5);
+      bot.look(bot.entity.yaw + turnAngle, 0, true);
     }
   }
 }
@@ -1029,43 +1365,99 @@ function checkPlayerProximity() {
 function startMovementLoop() {
   stopMovementLoop();
 
-  // Move back and forth periodically
+  // Set initial base anchor if not set
+  if (!baseAnchor && bot && bot.entity) {
+    baseAnchor = bot.entity.position.clone();
+    console.log(`[Base Guard] Base anchor locked at: ${baseAnchor.floored()}`);
+  }
+
+  // Fast Combat & Self-Defense Loop (Every 350ms)
+  combatInterval = setInterval(() => {
+    try {
+      checkCombatAndMobs();
+    } catch (_) {}
+  }, 350);
+
+  // Natural Base Patrol & Guard AI (Every 4.5 seconds)
   movementInterval = setInterval(async () => {
-    if (!bot || !bot.entity || bot.isSleeping) return;
+    if (!bot || !bot.entity || bot.isSleeping || isEating) return;
 
     try {
+      // 1. Check health and eat if needed
+      await autoEatFood();
+
+      // 2. Check and equip any gear
+      await autoEquipArmor();
+
+      // 3. Check player proximity
       checkPlayerProximity();
 
-      // Move forward for 1.0 second
-      bot.setControlState('forward', true);
-      await sleep(1000);
-      if (!bot || bot.isSleeping) return;
-      bot.setControlState('forward', false);
+      // 4. Update base anchor if near bed
+      const bed = findNearbyBed();
+      if (bed && !baseAnchor) {
+        baseAnchor = bed.position.clone();
+      }
 
-      await sleep(400);
-      if (!bot || bot.isSleeping) return;
+      if (!baseAnchor) {
+        baseAnchor = bot.entity.position.clone();
+      }
 
-      // Move backward for 1.0 second
-      bot.setControlState('back', true);
-      await sleep(1000);
-      if (!bot || bot.isSleeping) return;
-      bot.setControlState('back', false);
+      const distFromBase = bot.entity.position.distanceTo(baseAnchor);
 
-      // Random small look adjustment to prevent simple anti-AFK detection
-      if (bot && bot.entity) {
-        const yaw = (Math.random() - 0.5) * 0.3;
-        bot.look(bot.entity.yaw + yaw, bot.entity.pitch, true);
+      // 1. If RamLaal was teleported or spawned far away (> 15 blocks), update anchor to current spot!
+      if (distFromBase > 15) {
+        baseAnchor = bot.entity.position.clone();
+        console.log(`[Base Guard] Position shifted > 15 blocks. Re-anchored to current location: ${baseAnchor.floored()}`);
+      }
+
+      // 2. If drifted past patrol radius (5-7 blocks), gently face towards base center
+      if (distFromBase > BASE_PATROL_RADIUS) {
+        const dx = baseAnchor.x - bot.entity.position.x;
+        const dz = baseAnchor.z - bot.entity.position.z;
+        const yawTowardsBase = Math.atan2(-dx, -dz);
+        bot.look(yawTowardsBase, 0, true);
+        await smartStepForward(700);
+        return;
+      }
+
+      // 3. Natural gentle living base patrol (takes short natural steps with collision avoidance)
+      const actionRoll = Math.random();
+
+      if (actionRoll < 0.35) {
+        // Take a small gentle step (1-2 blocks) in an open direction
+        const randomAngle = (Math.random() - 0.5) * Math.PI * 0.8;
+        bot.look(bot.entity.yaw + randomAngle, (Math.random() - 0.5) * 0.15, true);
+        await smartStepForward(600);
+      } else if (actionRoll < 0.65) {
+        // Natural look-around (horizon, sky, surroundings)
+        const yaw = (Math.random() - 0.5) * Math.PI * 0.7;
+        const pitch = (Math.random() - 0.5) * 0.3;
+        bot.look(bot.entity.yaw + yaw, pitch, true);
+      } else if (actionRoll < 0.85) {
+        // Look towards nearest player if nearby
+        const players = Object.values(bot.players).filter(p => p && p.entity && p.username !== bot.username);
+        if (players.length > 0) {
+          const nearestPlayer = players[0];
+          lookAtPlayer(nearestPlayer.username);
+        }
+      } else {
+        // Peaceful idle pause
+        await sleep(500);
       }
     } catch (err) {
-      console.error('[Bot Movement Error]', err);
+      console.error('[Base Guard Error]', err);
     }
-  }, 4000);
+  }, 4500);
 }
 
 function stopMovementLoop() {
   if (movementInterval) {
     clearInterval(movementInterval);
     movementInterval = null;
+  }
+  if (combatInterval) {
+    clearInterval(combatInterval);
+    combatInterval = null;
   }
   if (bot) {
     try {
