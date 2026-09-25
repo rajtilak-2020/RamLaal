@@ -1,0 +1,68 @@
+# 🤖 RAMLAAL - SERVER BOT GUIDE 🤖
+> *Meet RamLaal! Our 24/7 server companion who keeps the server online, talks back, copies your moves, and guards the base!*
+
+────────────────────────────────────────────
+
+### 🛌 1. SLEEP & SKIP NIGHT (Instant Bed Sprint)
+* `!sleep` (or `soja`) ➔ RamLaal sprints at full speed to his bed and hops in to skip the night!
+* `!wake` (or `uth ja`) ➔ Wakes RamLaal up from his bed.
+> **Note:** The exact second night arrives, he automatically sprints to bed on his own too!
+
+────────────────────────────────────────────
+
+### 🧍‍♂️ 2. BODY-LANGUAGE MIRRORING (He Copies You!)
+* **Crouch:** Walk up to RamLaal and **CROUCH** ➔ He immediately crouches back like a real player!
+* **Jump:** Hop in front of him ➔ He does a happy hop with you!
+* **Arm Swing:** Swing your arm at him ➔ He gives you a friendly arm wave back!
+
+────────────────────────────────────────────
+
+### 👀 3. DISTANT VISION & EYE-CONTACT GREETINGS
+* **Watching from Far:** When you are working 10–20 blocks away, RamLaal smoothly turns his head to watch you like a curious friend.
+* **Eye-Contact Greeting:** If you aim your crosshair directly at him from far away, he detects your gaze, waves, nods, and drops a casual greeting in chat!
+
+────────────────────────────────────────────
+
+### 🧱 4. CURIOUS BUILDING INSPECTION
+* Whenever you place blocks near him (within 5 blocks):
+  * He hears the block place, turns his head toward your new block, inspects it, and compliments your architecture!
+
+────────────────────────────────────────────
+
+### 🥰 5. CUTE & WHOLESOME COMMANDS
+Type these in normal chat to interact with him:
+* `!hug` (or `gale mil`, `pyaar`) ➔ Gives you a big warm virtual hug! 🤗❤️
+* `!pat` (or `headpat`, `pucho`) ➔ Nods happily and purrs from the headpat! 🥰🐾
+* `!flower` (or `phool`) ➔ Delivers a sweet virtual flower to you! 🌸🌼
+* `!sing` (or `gaana`) ➔ Sings a cute funny Minecraft song! 🎶🎤
+* `!compliment` (or `tareef`) ➔ Tells you why you are the best player! 💖✨
+* `!setbase` (or `yahan raho`) ➔ Locks his base home anchor right to your current spot! 📍
+
+────────────────────────────────────────────
+
+### 🕺 6. FUN MOVES & DANCES
+* `!twerk` (or `mujra`) ➔ RamLaal twerks up and down! 💃
+* `!jump` (or `dance`) ➔ Jumps with joy! 🕺
+* `!spin` (or `beyblade`) ➔ Spins 360 degrees! 🌪️
+* `!fight` (or `punch`) ➔ Playfully punches the air! 🥊
+
+────────────────────────────────────────────
+
+### 🧠 7. AI MINI-GAMES & CHAT ROASTS
+* `!iq` ➔ Scans your brain and gives your Minecraft IQ! 🧠
+* `!roast <player>` (or `roast me`) ➔ Drops a savage roast in chat! 🔥
+* `!shayari` ➔ Recites hilarious Desi Minecraft poetry! 📜
+* `!fortune` (or `kismat`) ➔ Predicts your luck (Creepers, Diamonds, or Death)! 🔮
+* `!calc <math>` ➔ Solves math problems (e.g. `!calc 50*2+10`) 🤖
+* `!toss` (or `coin`) ➔ Flips a coin for Heads or Tails! 🪙
+
+────────────────────────────────────────────
+
+### 💬 8. TALK TO HIM NATURALLY IN CHAT
+RamLaal understands natural talk and replies directly while looking at you:
+* Say `hi` / `hello` / `kaisa hai` ➔ Friendly greetings.
+* Say `ramlaal` ➔ Asks what you need.
+* Call him a `noob` or `bot` ➔ He roasts your dirt house and your PvP skills!
+* Ask for `diamond` or `khana` ➔ He complains about being broke himself.
+* Praise him (`op`, `pro`, `king`) ➔ He jumps with pride.
+* Say `bye` / `tata` ➔ Gives a funny farewell.
