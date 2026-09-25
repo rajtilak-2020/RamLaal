@@ -1,0 +1,21 @@
+{
+  "name": "aternos-afk-bot",
+  "version": "1.0.0",
+  "description": "AFK Mineflayer bot for Aternos servers with auto-reconnect and anti-AFK movement",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "keywords": [
+    "minecraft",
+    "mineflayer",
+    "afk-bot",
+    "aternos"
+  ],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "dotenv": "^16.4.7",
+    "mineflayer": "^4.39.0"
+  }
+}

@@ -1,0 +1,88 @@
+================================================================================
+                    🤖 RAMLAAL - SERVER BOT GUIDE 🤖
+        (Share this with your server members & Discord friends!)
+================================================================================
+
+Meet RamLaal! He is our 24/7 server companion. He walks around, talks back,
+roasts players, and helps us skip the night!
+
+Here is everything you can do with him in the game:
+
+--------------------------------------------------------------------------------
+🛌 1. SLEEP & SKIP NIGHT
+--------------------------------------------------------------------------------
+• Type: !sleep  (or "soja", "soja ramlaal")
+  ➔ RamLaal will walk to his bed and sleep to skip the night!
+
+• Type: !wake   (or "uth ja", "uth")
+  ➔ Wakes RamLaal up from his bed in the morning.
+
+
+--------------------------------------------------------------------------------
+🕺 2. FUN MOVES & ANIMATIONS
+--------------------------------------------------------------------------------
+Type these in public chat and watch him perform:
+
+• !twerk  (or "mujra")    ➔ RamLaal will look at you and twerk! 💃
+• !jump   (or "dance")    ➔ RamLaal jumps and shows his dance moves! 🕺
+• !fight  (or "punch")    ➔ RamLaal starts throwing rapid punches in the air! 🥊
+• !spin   (or "beyblade") ➔ RamLaal spins 360 degrees like a Beyblade! 🌪️
+
+
+--------------------------------------------------------------------------------
+🧠 3. AI MINI-GAMES & COMMANDS
+--------------------------------------------------------------------------------
+• !iq                  ➔ Scans your brain and calculates your Minecraft IQ!
+• !roast <player>      ➔ Generates a savage roast for you or your friend!
+• !shayari             ➔ Recites funny Desi Minecraft poetry!
+• !fortune             ➔ Predicts your luck (Creepers, Diamonds, or Death)!
+• !calc <math>         ➔ Solves math problems (e.g. !calc 50*2+10)
+• !toss (or "coin")    ➔ Flips a coin for Heads or Tails!
+
+
+--------------------------------------------------------------------------------
+💬 4. TALK TO RAMLAAL IN CHAT (He talks back!)
+--------------------------------------------------------------------------------
+RamLaal listens to player messages, looks at you, and replies:
+
+• Say "hi" / "hello" / "kaisa hai"
+  ➔ He greets you like a tired 24/7 worker.
+
+• Say "ramlaal" or "ramlal"
+  ➔ He turns his head to you and asks what you need.
+
+• Call him a "noob" / "bot" / roast him
+  ➔ Be careful! He will roast your dirt house and your PvP skills.
+
+• Ask for "diamond" / "khana" / "iron"
+  ➔ He complains that he is broke himself and tells you to go mining.
+
+• Praise him ("op", "pro", "king", "goat")
+  ➔ He jumps with pride and flexes his supreme AI status.
+
+• Ask "who made you" / "tera baap kon hai"
+  ➔ He tells you who created him.
+
+• Ask about his "girlfriend" / "crush"
+  ➔ He cries about Alex leaving him for Steve.
+
+• Say "bye" / "tata" / "ja raha hu"
+  ➔ He gives a savage goodbye.
+
+
+--------------------------------------------------------------------------------
+⚠️ 5. SURPRISE REACTIONS
+--------------------------------------------------------------------------------
+• Stand too close to him (< 2 blocks):
+  ➔ He will snap his neck, stare right into your eyes, and tell you to back off!
+
+• Punch or Hit him:
+  ➔ He swings his arm back, defends himself, and screams at you!
+
+• If you die near him:
+  ➔ He will roast your death in public chat for the whole server to see!
+
+• When rain starts:
+  ➔ He complains about the weather and asks for chai-pakode!
+
+================================================================================

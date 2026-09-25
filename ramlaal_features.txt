@@ -1,0 +1,140 @@
+================================================================================
+                    RAMLAAL-GPT v2.0 - COMPLETE FEATURE & COMMAND GUIDE
+================================================================================
+
+Name: RamLaal
+Role: 24/7 Server Keeper, Autonomous AFK Bot & Savage AI Companion
+Compatible Versions: Minecraft Java 1.8.8 to 1.21.x (including 1.21.11)
+
+--------------------------------------------------------------------------------
+1. 🤖 AUTONOMOUS BACKGROUND FEATURES (Runs Automatically)
+--------------------------------------------------------------------------------
+
+1. Anti-AFK Routine:
+   - Moves forward for 1s, pauses, moves backward for 1s.
+   - Adjusts head yaw slightly to evade anti-AFK detection plugins.
+   - Keeps your Aternos server alive 24/7 without kicking.
+
+2. Smart Night & Thunder Sleeping:
+   - Constantly checks the in-game clock every 10 seconds.
+   - If night falls (time >= 12541) or a thunderstorm starts, RamLaal locates a
+     nearby bed (within 4 blocks), climbs in, and skips the night for everyone.
+   - Automatically wakes up at dawn and resumes his movement routine.
+
+3. Proximity Radar (Personal Space Staring):
+   - When a player stands closer than 1.8 blocks to RamLaal, he stops, snaps his
+     head to look directly into their eyes, and scolds them for invading his
+     personal space or asks if they want an autograph.
+
+4. Combat & Hurt Reactions:
+   - If any player attacks or punches RamLaal, he swings his arm back in defense
+     and blasts them in chat with angry comeback roasts.
+
+5. Death Observer (Savage Roasts):
+   - When any player dies near RamLaal (killed by mob, falling, lava, etc.),
+     RamLaal instantly drops a savage roast from a 205-line roast pool.
+
+6. Weather Awareness:
+   - When it starts raining, RamLaal asks for tea/pakode in chat.
+   - When rain stops, he comments on the sun coming back out.
+
+7. Periodic Server Banter:
+   - Every 2.5 to 5.5 minutes, RamLaal drops a random hilarious Hindi or English
+     line from a 217-message pool complaining about his 24/7 job, noob players,
+     Aternos admins, and diamonds.
+
+8. Auto-Respawn & Auto-Reconnect:
+   - If RamLaal dies, he respawns automatically after 2 seconds.
+   - If disconnected or kicked, he reconnects automatically every 15 seconds.
+
+
+--------------------------------------------------------------------------------
+2. 🎮 IN-GAME CHAT COMMANDS (Type in Public Chat)
+--------------------------------------------------------------------------------
+
+[SLEEP & WAKE]
+• !sleep (or 'soja', 'soja ramlaal', 'so ja')
+  ➔ Forces RamLaal to find the nearest bed and go to sleep immediately.
+• !wake (or 'uth ja', 'uthja', 'uth')
+  ➔ Wakes RamLaal up from his bed.
+
+[PHYSICAL ANIMATIONS & MOVES]
+• !twerk (or 'mujra', 'crouch')
+  ➔ RamLaal looks at you and rapidly sneaks up and down 5 times!
+• !fight (or 'punch', 'maar', 'lad')
+  ➔ RamLaal looks at you and throws rapid punches in the air.
+• !jump (or 'kood', 'dance', 'naach')
+  ➔ RamLaal looks at you, jumps, and drops a funny dance quote.
+• !spin (or 'ghoom', 'beyblade')
+  ➔ RamLaal turns into a Beyblade and spins around 360 degrees.
+
+[AI & MINI-GAMES]
+• !iq (or 'dimaag')
+  ➔ Scans your brain with fake AI neural networks and reveals your Minecraft IQ.
+• !roast <player> (or 'roast me', '!roast')
+  ➔ Generates a custom roast about that player's gameplay.
+• !shayari (or 'poem', 'kavita')
+  ➔ Recites hilarious Desi Minecraft poetry.
+• !fortune (or 'kismat', 'bhavishya')
+  ➔ Predicts your Minecraft future (Creeper attacks, diamond luck, fall damage).
+• !calc <math> (e.g. '!calc 25*4+10')
+  ➔ Solves the math equation and roasts you for asking easy questions.
+• !toss (or '!coin', 'coin')
+  ➔ Flips a virtual coin and declares HEADS or TAILS.
+
+
+--------------------------------------------------------------------------------
+3. 💬 CONVERSATIONAL CHAT TRIGGERS (Speak to him naturally)
+--------------------------------------------------------------------------------
+
+RamLaal listens to what players type in chat and replies directly while looking
+at the speaker:
+
+1. Greetings:
+   - Say: "hi", "hello", "hey", "sup", "kaisa hai", "kya haal", "wassup"
+   - RamLaal: Replies with warm yet tired worker greetings.
+
+2. Insults & Roasts:
+   - Say: "noob", "bot", "chutiya", "pagal", "bhadwe", "gadhe", "idiot", "lmao"
+   - RamLaal: Drops savage counter-roasts about dirt houses and dying to trees.
+
+3. Begging for Items:
+   - Say: "diamond", "iron", "khana", "food", "roti", "paisa", "de na", "loot"
+   - RamLaal: Tells you he is broke himself and tells you to go mining.
+
+4. Praise & Love:
+   - Say: "pro", "op", "legend", "goat", "king", "love", "bhai hai tu"
+   - RamLaal: Jumps with joy and flexes his supreme AI status.
+
+5. Creator Question:
+   - Say: "who made you", "tera baap kon hai", "creator", "kisne banaya"
+   - RamLaal: Proudly states that Krajtilak created him.
+
+6. Love Life / Girlfriends:
+   - Say: "girlfriend", "crush", "shadi", "gf"
+   - RamLaal: Cries about Alex running away with Steve.
+
+7. Goodbyes:
+   - Say: "bye", "tata", "goodbye", "ja raha hu", "offline"
+   - RamLaal: Waves goodbye with savage farewell lines.
+
+8. Calling his name:
+   - Say: "ramlaal" or "ramlal" anywhere in chat
+   - RamLaal: Turns to you and asks what you want.
+
+
+--------------------------------------------------------------------------------
+4. ⚙️ SERVER SETUP TIPS FOR BEST EXPERIENCE
+--------------------------------------------------------------------------------
+
+1. Bed Setup:
+   - Place a bed within 2-3 blocks of RamLaal so he can sleep every night.
+
+2. Lock his Spawn:
+   - Stand where you want him and run: /spawnpoint RamLaal
+   - Run: /gamerule spawnRadius 0 (so he never spawns in random spots).
+
+3. Safe AFK Box:
+   - Keep him in a lit 3x3 room so nighttime zombies/skeletons can't kill him.
+
+================================================================================
