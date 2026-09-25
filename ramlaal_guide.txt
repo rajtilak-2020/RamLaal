@@ -1,24 +1,58 @@
 ================================================================================
-                    🤖 RAMLAAL - ADORABLE COMPANION GUIDE 🤖
+                    🤖 RAMLAAL - REALISTIC BASE COMPANION GUIDE 🤖
         (Share this with your server members & Discord friends!)
 ================================================================================
 
-Meet RamLaal! He is our adorable, living base companion. He wanders around the
-base, waves, nods, cuddles in bed, and loves hanging out with everyone!
+RamLaal now has REALISTIC HUMAN-LIKE MOVEMENTS and an INSTANT BED SPRINT!
+He moves smoothly like an actual player on your server and dives into bed the
+second night arrives!
 
 --------------------------------------------------------------------------------
-🏠 1. ADORABLE "WELCOME HOME" REACTION
+🏃‍♂️ 1. INSTANT NIGHT BED SPRINT (Zero Delay!)
+--------------------------------------------------------------------------------
+• The exact millisecond night falls (or thunderstorm begins), RamLaal's internal
+  clock detects it immediately.
+• He scans for his bed up to 18 blocks away.
+• He drops what he's doing and SPRINTS AT FULL SPEED directly to his bed!
+• He auto-jumps over any steps or slabs on the way.
+• The moment he reaches the bed (< 3 blocks), he dives right in and skips the
+  night for everyone!
+
+
+--------------------------------------------------------------------------------
+🚶‍♂️ 2. REALISTIC HUMAN-LIKE WALKING STYLES
+--------------------------------------------------------------------------------
+RamLaal no longer walks like a mechanical robot. He uses 5 living player styles:
+
+1. The Casual Stroll:
+   Takes relaxed steps while gently swaying his head and looking around.
+2. The Curious Inspector:
+   Walks up to a flower/block, pitches his head down 30° to inspect it, does a
+   quick double-crouch, then moves on.
+3. The Playful Jog & Bunny-Hop:
+   Does a quick human sprint burst with a clean bunny-hop!
+4. The Base Lookout:
+   Stands tall, slowly pans his head from left to right, scanning the horizon and
+   checking the sky for phantoms/sun.
+5. The Player Watcher:
+   Smoothly turns and follows your movements with his eyes as you walk past.
+6. Obstacle & Cliff Avoidance:
+   Auto-jumps over 1-block steps and refuses to walk off dangerous cliffs or pits!
+
+
+--------------------------------------------------------------------------------
+🏠 3. ADORABLE "WELCOME HOME" REACTION
 --------------------------------------------------------------------------------
 • When you return to the base from mining or exploring:
   ➔ RamLaal spots you, does the universal Minecraft crouch-spam greeting,
      waves his arm excitedly, and celebrates your return:
-     "Yay! [Player] wapas aa gaye! Welcome home! 🥰✨"
+     "Yay! [Player] wapas aa gaye! Maine base ka bohot dhyan rakha! Welcome home! 🥰✨"
 • When you walk close to him:
   ➔ He stops, crouches to say hello, and waves like a real human player!
 
 
 --------------------------------------------------------------------------------
-🥰 2. WHOLESOME & CUTE COMMANDS
+🥰 4. WHOLESOME & CUTE COMMANDS
 --------------------------------------------------------------------------------
 Type these in public chat to interact with him:
 
@@ -37,9 +71,12 @@ Type these in public chat to interact with him:
 • !compliment (or "tareef")
   ➔ RamLaal tells you why you are the best player on the server! 💖✨
 
+• !setbase (or "yahan raho")
+  ➔ Locks his home anchor to your current spot!
+
 
 --------------------------------------------------------------------------------
-🕺 3. FUN MOVES & DANCES
+🕺 5. FUN MOVES & DANCES
 --------------------------------------------------------------------------------
 • !twerk (or "mujra")    ➔ RamLaal twerks up and down! 💃
 • !jump (or "dance")     ➔ RamLaal hops with joy! 🕺
@@ -48,17 +85,7 @@ Type these in public chat to interact with him:
 
 
 --------------------------------------------------------------------------------
-🛌 4. COZY BEDTIME & MORNING
---------------------------------------------------------------------------------
-• Bedtime: At night, he hops into bed and wishes everyone sweet dreams with his teddy bear! 🧸🛌
-• Morning: Wakes up shouting "Good morning sunshine! ☀️🌸"
-• Commands:
-  - !sleep (or "soja") ➔ Forces him to bed immediately.
-  - !wake (or "uth ja") ➔ Wakes him up.
-
-
---------------------------------------------------------------------------------
-🧠 5. AI MINI-GAMES
+🧠 6. AI MINI-GAMES
 --------------------------------------------------------------------------------
 • !iq                  ➔ Scans your brain and gives your Minecraft IQ!
 • !roast <player>      ➔ Generates a funny roast for a friend!
