@@ -1,97 +1,92 @@
 ================================================================================
-                    🤖 RAMLAAL - REALISTIC BASE COMPANION GUIDE 🤖
+                🤖 RAMLAAL - ULTRA-REALISTIC COMPANION GUIDE 🤖
         (Share this with your server members & Discord friends!)
 ================================================================================
 
-RamLaal now has REALISTIC HUMAN-LIKE MOVEMENTS and an INSTANT BED SPRINT!
-He moves smoothly like an actual player on your server and dives into bed the
-second night arrives!
+RamLaal has reached MAXIMUM HUMAN REALISM! He now mirrors your body language,
+fidgets with his hotbar items, inspects your builds, and moves with organic
+human mouse physics!
 
 --------------------------------------------------------------------------------
-🏃‍♂️ 1. INSTANT NIGHT BED SPRINT (Zero Delay!)
+🧍‍♂️ 1. BODY-LANGUAGE MIRRORING (He Copies Your Moves!)
 --------------------------------------------------------------------------------
-• The exact millisecond night falls (or thunderstorm begins), RamLaal's internal
-  clock detects it immediately.
+• Crouch Mirroring:
+  ➔ Walk up to RamLaal and CROUCH. He will immediately crouch back in rhythm
+     like real Minecraft players do to greet each other!
+• Jump Mirroring:
+  ➔ Jump in front of him, and he will do a happy hop with you!
+• Arm Swing:
+  ➔ Swing your arm at him, and he will do a friendly wave back!
+
+
+--------------------------------------------------------------------------------
+🧱 2. CURIOUS BUILDING INSPECTION
+--------------------------------------------------------------------------------
+• Whenever you or a friend place a block near RamLaal (within 5 blocks):
+  ➔ He hears the block place, turns his head to look directly at the new block,
+     nods in approval, and compliments your architecture!
+     "Arre wah! Naya block lagaya, badhiya build lag raha hai 🧱✨"
+
+
+--------------------------------------------------------------------------------
+🎮 3. REAL HUMAN HABITS & PHYSICS
+--------------------------------------------------------------------------------
+• Organic Mouse Camera:
+  Smooth S-curve head turns with subtle micro-movements simulating a human hand
+  resting on a mouse (no jerky robot snaps).
+• Hotbar Fidgeting:
+  Every 20-30 seconds, he switches items in his hand (tools, bread, flowers, etc.)
+  just like restless players cycling their 1-5 keys.
+• Realistic Typing Delays:
+  Before he speaks in chat, he looks at you and pauses for 1-2 seconds,
+  simulating real keyboard typing before sending his message!
+
+
+--------------------------------------------------------------------------------
+👀 4. DISTANT VISION & EYE-CONTACT GREETINGS
+--------------------------------------------------------------------------------
+• Watching from afar (6 to 22 blocks):
+  ➔ While patrolling, RamLaal notices players walking in the distance and
+     smoothly turns his head to watch them.
+• Eye-Contact Greeting:
+  ➔ When you look directly at him with your crosshair from afar, he senses
+     your gaze, waves, nods, and drops a casual greeting in chat!
+
+
+--------------------------------------------------------------------------------
+🏃‍♂️ 5. INSTANT NIGHT BED SPRINT
+--------------------------------------------------------------------------------
+• The exact millisecond night falls, RamLaal detects it instantly.
 • He scans for his bed up to 18 blocks away.
-• He drops what he's doing and SPRINTS AT FULL SPEED directly to his bed!
-• He auto-jumps over any steps or slabs on the way.
+• He SPRINTS AT FULL SPEED directly to his bed and auto-jumps over any steps!
 • The moment he reaches the bed (< 3 blocks), he dives right in and skips the
   night for everyone!
 
 
 --------------------------------------------------------------------------------
-🚶‍♂️ 2. REALISTIC HUMAN-LIKE WALKING STYLES
---------------------------------------------------------------------------------
-RamLaal no longer walks like a mechanical robot. He uses 5 living player styles:
-
-1. The Casual Stroll:
-   Takes relaxed steps while gently swaying his head and looking around.
-2. The Curious Inspector:
-   Walks up to a flower/block, pitches his head down 30° to inspect it, does a
-   quick double-crouch, then moves on.
-3. The Playful Jog & Bunny-Hop:
-   Does a quick human sprint burst with a clean bunny-hop!
-4. The Base Lookout:
-   Stands tall, slowly pans his head from left to right, scanning the horizon and
-   checking the sky for phantoms/sun.
-5. The Player Watcher:
-   Smoothly turns and follows your movements with his eyes as you walk past.
-6. Obstacle & Cliff Avoidance:
-   Auto-jumps over 1-block steps and refuses to walk off dangerous cliffs or pits!
-
-
---------------------------------------------------------------------------------
-🏠 3. ADORABLE "WELCOME HOME" REACTION
---------------------------------------------------------------------------------
-• When you return to the base from mining or exploring:
-  ➔ RamLaal spots you, does the universal Minecraft crouch-spam greeting,
-     waves his arm excitedly, and celebrates your return:
-     "Yay! [Player] wapas aa gaye! Maine base ka bohot dhyan rakha! Welcome home! 🥰✨"
-• When you walk close to him:
-  ➔ He stops, crouches to say hello, and waves like a real human player!
-
-
---------------------------------------------------------------------------------
-🥰 4. WHOLESOME & CUTE COMMANDS
+🥰 6. WHOLESOME & CUTE COMMANDS
 --------------------------------------------------------------------------------
 Type these in public chat to interact with him:
 
-• !hug (or "gale mil", "pyaar")
-  ➔ RamLaal crouches, waves his arms, and gives you a warm virtual hug! 🤗❤️
-
-• !pat (or "headpat", "pucho")
-  ➔ RamLaal nods his head happily and purrs from the headpat! 🥰🐾
-
-• !flower (or "phool", "gift")
-  ➔ RamLaal delivers a sweet virtual flower to you! 🌸🌼
-
-• !sing (or "gaana", "song")
-  ➔ RamLaal sings a cute funny Minecraft song for the server! 🎶🎤
-
-• !compliment (or "tareef")
-  ➔ RamLaal tells you why you are the best player on the server! 💖✨
-
-• !setbase (or "yahan raho")
-  ➔ Locks his home anchor to your current spot!
+• !hug (or "gale mil", "pyaar") ➔ Gives you a big warm virtual hug! 🤗❤️
+• !pat (or "headpat", "pucho")  ➔ Nods happily and purrs from the headpat! 🥰🐾
+• !flower (or "phool")          ➔ Delivers a sweet virtual flower! 🌸🌼
+• !sing (or "gaana")            ➔ Sings a cute funny Minecraft song! 🎶🎤
+• !compliment (or "tareef")     ➔ Tells you why you are the best player! 💖✨
+• !setbase (or "yahan raho")    ➔ Locks his home anchor to your current spot!
 
 
 --------------------------------------------------------------------------------
-🕺 5. FUN MOVES & DANCES
+🕺 7. FUN MOVES & AI MINI-GAMES
 --------------------------------------------------------------------------------
-• !twerk (or "mujra")    ➔ RamLaal twerks up and down! 💃
-• !jump (or "dance")     ➔ RamLaal hops with joy! 🕺
-• !spin (or "beyblade")  ➔ RamLaal spins 360 degrees! 🌪️
-• !fight (or "punch")    ➔ RamLaal playfully punches the air! 🥊
-
-
---------------------------------------------------------------------------------
-🧠 6. AI MINI-GAMES
---------------------------------------------------------------------------------
-• !iq                  ➔ Scans your brain and gives your Minecraft IQ!
-• !roast <player>      ➔ Generates a funny roast for a friend!
-• !shayari             ➔ Recites hilarious Desi Minecraft poetry!
-• !fortune             ➔ Predicts your luck (Creepers, Diamonds, or Death)!
-• !calc <math>         ➔ Solves math problems (e.g. !calc 50*2+10)
-• !toss (or "coin")    ➔ Flips a coin for Heads or Tails!
-
+• !twerk (or "mujra")    ➔ Twerks up and down! 💃
+• !jump (or "dance")     ➔ Hops with joy! 🕺
+• !spin (or "beyblade")  ➔ Spins 360 degrees! 🌪️
+• !fight (or "punch")    ➔ Playfully punches the air! 🥊
+• !iq                    ➔ Scans your brain and gives your Minecraft IQ! 🧠
+• !roast <player>        ➔ Generates a funny roast for a friend! 🔥
+• !shayari               ➔ Recites hilarious Desi Minecraft poetry! 📜
+• !fortune               ➔ Predicts your luck (Creepers, Diamonds, or Death)! 🔮
+• !calc <math>           ➔ Solves math problems (e.g. !calc 50*2+10) 🤖
+• !toss (or "coin")      ➔ Flips a coin for Heads or Tails! 🪙
 ================================================================================

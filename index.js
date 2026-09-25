@@ -2,6 +2,7 @@ require('dotenv').config();
 const http = require('http');
 const fs = require('fs');
 const path = require('path');
+const { Vec3 } = require('vec3');
 const mineflayer = require('mineflayer');
 
 // Configuration from environment variables
@@ -585,6 +586,36 @@ function createBot() {
     }
   });
 
+  // Human Habit: Curious Block Placement / Building Inspection
+  let lastBuildPraise = 0;
+  bot.on('blockUpdate', (oldBlock, newBlock) => {
+    if (!bot || !bot.entity || bot.isSleeping || isSprintingToBed) return;
+    if (!newBlock || newBlock.name === 'air') return;
+
+    const dist = bot.entity.position.distanceTo(newBlock.position);
+    // If a block is placed within 5 blocks of RamLaal, look curiously at what was built!
+    if (dist <= 5.5 && Math.random() < 0.75) {
+      setTimeout(() => {
+        if (!bot || !bot.entity || bot.isSleeping) return;
+        try {
+          bot.lookAt(newBlock.position.offset(0.5, 0.5, 0.5));
+          nodHead();
+        } catch (_) {}
+
+        const now = Date.now();
+        if (now - lastBuildPraise > 90000) { // 90s cooldown
+          lastBuildPraise = now;
+          const buildLines = [
+            "Arre wah! Naya block lagaya, badhiya build lag raha hai 🧱✨",
+            "Dekh raha hu mai! Architect ban rahe ho sab log 🏡 hammer emoji",
+            "Sundar design banaya hai! Base aur accha lag raha hai ab 🌸"
+          ];
+          humanChat(getRandom(buildLines));
+        }
+      }, 300);
+    }
+  });
+
   bot.on('spawn', () => {
     console.log('[Bot] Spawned in the world. Initializing AI perception core...');
     startMovementLoop();
@@ -1118,14 +1149,76 @@ async function goToSleep(silent = false) {
   }
 }
 
+
+// 3D Vector Math: Detects if a player is looking in RamLaal's direction (Eye Contact)
+function isPlayerLookingAtBot(playerEntity) {
+  if (!bot || !bot.entity || !playerEntity) return false;
+  try {
+    const playerEyePos = playerEntity.position.offset(0, playerEntity.height * 0.85, 0);
+    const botChestPos = bot.entity.position.offset(0, bot.entity.height * 0.7, 0);
+    const toBot = botChestPos.minus(playerEyePos).normalize();
+
+    const pYaw = playerEntity.yaw;
+    const pPitch = playerEntity.pitch;
+
+    const lookDir = new Vec3(
+      -Math.sin(pYaw) * Math.cos(pPitch),
+      -Math.sin(pPitch),
+      -Math.cos(pYaw) * Math.cos(pPitch)
+    ).normalize();
+
+    const dot = lookDir.dot(toBot);
+    return dot > 0.88; // True if facing within ~28 degrees of RamLaal!
+  } catch (_) {
+    return false;
+  }
+}
+
 // Track player distances to trigger adorable "Welcome Home" reactions
 const playerLastDistance = {};
 
-function checkPlayerProximity() {
+
+// Human Body-Language Mirroring: If player crouches or jumps in front of RamLaal, mirror them!
+let lastMirrorAction = 0;
+function checkPlayerBodyLanguage() {
   if (!bot || !bot.entity || bot.isSleeping) return;
   const now = Date.now();
-  if (now - lastProximityCheck < 3000) return; // check every 3 seconds
+  if (now - lastMirrorAction < 4000) return; // 4s cooldown
+
+  for (const player of Object.values(bot.players)) {
+    if (!player || !player.entity || player.username === bot.username) continue;
+    const dist = bot.entity.position.distanceTo(player.entity.position);
+
+    // If player is standing within 4.5 blocks of RamLaal
+    if (dist <= 4.5) {
+      // Check if player is crouching / sneaking
+      const isPlayerSneaking = Boolean(player.entity.metadata && (player.entity.metadata[0] & 0x02));
+      if (isPlayerSneaking) {
+        lastMirrorAction = now;
+        lookAtPlayer(player.username);
+        friendlyCrouchGreeting();
+        return;
+      }
+
+      // Check if player is hopping / jumping (velocity Y > 0.2)
+      if (player.entity.velocity && player.entity.velocity.y > 0.25) {
+        lastMirrorAction = now;
+        lookAtPlayer(player.username);
+        doJump();
+        return;
+      }
+    }
+  }
+}
+
+function checkPlayerProximity() {
+  if (!bot || !bot.entity || bot.isSleeping || isSprintingToBed) return;
+  const now = Date.now();
+  if (now - lastProximityCheck < 2500) return; // check every 2.5 seconds
   lastProximityCheck = now;
+
+  let nearestFarPlayer = null;
+  let nearestFarDist = 24;
 
   for (const player of Object.values(bot.players)) {
     if (!player || !player.entity || player.username === bot.username) continue;
@@ -1133,7 +1226,35 @@ function checkPlayerProximity() {
     const prevDist = playerLastDistance[player.username] || dist;
     playerLastDistance[player.username] = dist;
 
-    // ADORABLE: Welcome Home Reaction (Player returns from mining/exploring to base)
+    // 1. WATCH PLAYERS FROM FAR (6 to 22 blocks away) & EYE-CONTACT GREETING
+    if (dist >= 5.5 && dist <= 22) {
+      if (dist < nearestFarDist) {
+        nearestFarDist = dist;
+        nearestFarPlayer = player;
+      }
+
+      // Check if the distant player is looking in RamLaal's direction!
+      if (isPlayerLookingAtBot(player.entity)) {
+        const lastEyeContact = proximityCooldowns['eye_' + player.username] || 0;
+        if (now - lastEyeContact > 70000) { // 70s cooldown per player
+          proximityCooldowns['eye_' + player.username] = now;
+          lookAtPlayer(player.username);
+          waveArm();
+          nodHead();
+          const eyeContactLines = [
+            `Arey ${player.username}! Door se kya dekh rahe ho, aao aao paas aao! 👋`,
+            `Dekh liya maine ${player.username} bhai! Handsome lag raha hu na aaj? 😎✨`,
+            `Yo ${player.username}! Door se hi namaste! Kaisi chal rahi hai mining? 👋`,
+            `Aise kya ghoor rahe ho ${player.username} babu? Autograph chahiye kya RamLaal ka? 😂`,
+            `Hello ${player.username}! Base ekdum safe hai, fikar mat karo! 🏡🌸`
+          ];
+          try { bot.chat(getRandom(eyeContactLines)); } catch (_) {}
+          continue;
+        }
+      }
+    }
+
+    // 2. WELCOME HOME REACTION (Player returns from mining/exploring to base)
     if (prevDist > 14 && dist <= 5.5) {
       const lastWelcome = proximityCooldowns['welcome_' + player.username] || 0;
       if (now - lastWelcome > 90000) { // 90s cooldown per player
@@ -1151,7 +1272,7 @@ function checkPlayerProximity() {
       }
     }
 
-    // Friendly greeting when standing close (crouch & wave)
+    // 3. CLOSE FRIENDLY GREETING (< 2.2 blocks: crouch & wave)
     if (dist < 2.2) {
       const lastSpoken = proximityCooldowns[player.username] || 0;
       if (now - lastSpoken > 40000) { // 40s cooldown per player
@@ -1166,6 +1287,11 @@ function checkPlayerProximity() {
         try { bot.chat(getRandom(cuteStareLines)); } catch (_) {}
       }
     }
+  }
+
+  // Smoothly glance at the nearest distant player if strolling
+  if (nearestFarPlayer && Math.random() < 0.6) {
+    lookAtPlayer(nearestFarPlayer.username);
   }
 }
 
@@ -1325,8 +1451,22 @@ async function checkCombatAndMobs() {
 // 🏃‍♂️ REALISTIC LIVING MOVEMENT & BED SPRINT AI
 // ==========================================
 
-// Smooth head look interpolation for human-like fluid movement
-async function smoothLook(targetYaw, targetPitch, steps = 3) {
+
+// Realistic Human Typing Simulation: Pauses naturally based on message length before sending
+async function humanChat(message, lookAtTarget = null) {
+  if (!bot || !message) return;
+  if (lookAtTarget) lookAtPlayer(lookAtTarget);
+
+  // Realistic human typing delay (400ms to 1800ms)
+  const typingMs = Math.min(1800, Math.max(500, message.length * 25));
+  await sleep(typingMs);
+  try {
+    bot.chat(message);
+  } catch (_) {}
+}
+
+// Organic Human Mouse Movement: Smooth S-curve easing with natural micro-jitters
+async function smoothLook(targetYaw, targetPitch, steps = 4) {
   if (!bot || !bot.entity || bot.isSleeping) return;
   const currentYaw = bot.entity.yaw;
   const currentPitch = bot.entity.pitch;
@@ -1334,10 +1474,17 @@ async function smoothLook(targetYaw, targetPitch, steps = 3) {
   const pitchDiff = targetPitch - currentPitch;
 
   for (let i = 1; i <= steps; i++) {
-    const y = currentYaw + (yawDiff * (i / steps));
-    const p = currentPitch + (pitchDiff * (i / steps));
+    // S-curve easing (smooth ease-in-out)
+    const t = i / steps;
+    const ease = t * t * (3 - 2 * t);
+    // Micro-jitter to simulate human hand / breathing on a mouse
+    const jitterYaw = (Math.random() - 0.5) * 0.015;
+    const jitterPitch = (Math.random() - 0.5) * 0.012;
+
+    const y = currentYaw + (yawDiff * ease) + jitterYaw;
+    const p = currentPitch + (pitchDiff * ease) + jitterPitch;
     try { bot.look(y, p, true); } catch (_) {}
-    await sleep(40);
+    await sleep(35);
   }
 }
 
@@ -1556,6 +1703,15 @@ function startMovementLoop() {
         await smartStepForward(700);
         return;
       }
+
+      // Human Habit: Switch hotbar slot (fidget with hands/tools)
+      if (Math.random() < 0.35 && typeof bot.setQuickBarSlot === 'function') {
+        const randomSlot = Math.floor(Math.random() * 5); // slots 0 to 4
+        try { bot.setQuickBarSlot(randomSlot); } catch (_) {}
+      }
+
+      // Check player body language (crouch & jump mirroring)
+      checkPlayerBodyLanguage();
 
       // 3. REALISTIC LIVING HUMAN WALKING STYLES & PATROL
       const styleRoll = Math.random();
