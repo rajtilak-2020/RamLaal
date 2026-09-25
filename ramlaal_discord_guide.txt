@@ -39,7 +39,20 @@
 
 ────────────────────────────────────────────
 
-### 🥰 6. CUTE & WHOLESOME COMMANDS
+### ⚔️ 6. AGGRESSIVE BASE DEFENSE & AUTO-RETURN (CREATIVE BOSS MODE)
+* **Fearless Monster Hunter:**
+  * RamLaal scans 16 blocks around him for ANY hostile mobs (Zombies, Creepers, Skeletons, Spiders, etc.).
+  * In Creative Mode, he has ZERO fear! He sprint-charges directly at monsters at full speed!
+* **Jump-Critical Combos:**
+  * Slices mobs with jump-critical attacks and rapid sword combos.
+* **Pursuit Beyond Block Limit:**
+  * Chases monsters up to 32 blocks away from base anchor to exterminate all threats.
+* **Automatic Return to Base:**
+  * The instant all monsters are defeated, RamLaal sprints right back to his original spawn/base location and resumes normal patrol!
+
+────────────────────────────────────────────
+
+### 🥰 7. CUTE & WHOLESOME COMMANDS
 Type these in normal chat to interact with him:
 * `!hug` (or `gale mil`, `pyaar`) ➔ Gives you a big warm virtual hug! 🤗❤️
 * `!pat` (or `headpat`, `pucho`) ➔ Nods happily and purrs from the headpat! 🥰🐾
@@ -50,7 +63,7 @@ Type these in normal chat to interact with him:
 
 ────────────────────────────────────────────
 
-### 🕺 7. FUN MOVES & DANCES
+### 🕺 8. FUN MOVES & DANCES
 * `!twerk` (or `mujra`) ➔ RamLaal twerks up and down! 💃
 * `!jump` (or `dance`) ➔ Jumps with joy! 🕺
 * `!spin` (or `beyblade`) ➔ Spins 360 degrees! 🌪️
@@ -58,7 +71,7 @@ Type these in normal chat to interact with him:
 
 ────────────────────────────────────────────
 
-### 🧠 8. AI MINI-GAMES & CHAT ROASTS (When Unmuted)
+### 🧠 9. AI MINI-GAMES & CHAT ROASTS (When Unmuted)
 * `!iq` ➔ Scans your brain and gives your Minecraft IQ! 🧠
 * `!roast <player>` (or `roast me`) ➔ Drops a savage roast in chat! 🔥
 * `!shayari` ➔ Recites hilarious Desi Minecraft poetry! 📜
@@ -68,7 +81,7 @@ Type these in normal chat to interact with him:
 
 ────────────────────────────────────────────
 
-### 💬 9. TALK TO HIM NATURALLY IN CHAT
+### 💬 10. TALK TO HIM NATURALLY IN CHAT
 When unmuted, RamLaal understands natural talk and replies directly while looking at you:
 * Say `hi` / `hello` / `kaisa hai` ➔ Friendly greetings.
 * Say `ramlaal` ➔ Asks what you need.

@@ -65,7 +65,27 @@ human mouse physics!
 
 
 --------------------------------------------------------------------------------
-🔇 6. MUTE & UNMUTE CHAT CONTROLS (NEW!)
+⚔️ 6. AGGRESSIVE BASE DEFENSE & AUTO-RETURN (CREATIVE BOSS MODE)
+--------------------------------------------------------------------------------
+• Fearless Monster Hunter:
+  ➔ RamLaal scans 16 blocks around him for ANY hostile mobs (Zombies, Creepers,
+     Skeletons, Spiders, Phantoms, Endermen, Witches, etc.).
+  ➔ Since he is in Creative Mode, he has ZERO fear! He sprint-charges directly
+     at monsters at maximum speed!
+• Jump-Critical Combos:
+  ➔ When within reach (<= 3.8 blocks), he performs jump-critical strikes,
+     swinging his sword with rapid combos to slice monsters down quickly.
+• Pursuit Beyond Block Limit:
+  ➔ He is allowed to chase mobs up to 32 blocks away from his base anchor to
+     ensure all threats near your base are completely eliminated!
+• Automatic Return to Base Spawn:
+  ➔ The moment all nearby monsters are dead, RamLaal automatically turns around,
+     sprints straight back to his original base/spawn anchor, and resumes his
+     peaceful patrol within his 7-block home zone!
+
+
+--------------------------------------------------------------------------------
+🔇 7. MUTE & UNMUTE CHAT CONTROLS
 --------------------------------------------------------------------------------
 Want total silence in the chat, or ready to chat again? Use these:
 
@@ -84,7 +104,7 @@ Want total silence in the chat, or ready to chat again? Use these:
 
 
 --------------------------------------------------------------------------------
-🥰 7. WHOLESOME & CUTE COMMANDS
+🥰 8. WHOLESOME & CUTE COMMANDS
 --------------------------------------------------------------------------------
 Type these in public chat to interact with him:
 
@@ -97,7 +117,7 @@ Type these in public chat to interact with him:
 
 
 --------------------------------------------------------------------------------
-🕺 8. FUN MOVES & AI MINI-GAMES
+🕺 9. FUN MOVES & AI MINI-GAMES
 --------------------------------------------------------------------------------
 • !twerk (or "mujra")    ➔ Twerks up and down! 💃
 • !jump (or "dance")     ➔ Hops with joy! 🕺

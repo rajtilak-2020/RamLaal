@@ -555,9 +555,14 @@ let lastDeathRoast = 0;
 let proximityCooldowns = {};
 let isMuted = config.isMuted;
 
-// Base Anchor - RamLaal stays near base only (never leaves base perimeter)
+// Base Anchor & Aggressive Combat Guard Range
 let baseAnchor = null;
-const BASE_PATROL_RADIUS = 7; // Max distance in blocks from base center
+const BASE_PATROL_RADIUS = 7;         // Normal patrol radius in blocks from base center
+const COMBAT_DETECTION_RADIUS = 16;   // Aggressively spots and charges hostiles up to 16 blocks away
+const MAX_CHASE_DISTANCE = 32;        // Can chase and exterminate mobs up to 32 blocks away from base anchor
+let isFightingMobs = false;
+let isReturningToBase = false;
+let currentCombatTarget = null;
 
 // Central Safe Chat Handler - Strictly respects isMuted state and handles uninitialized bot.chat safely
 function safeChat(message, force = false) {
@@ -642,6 +647,10 @@ function createBot() {
 
   bot.on('spawn', () => {
     console.log('[Bot] Spawned in the world. Initializing AI perception core...');
+    if (bot && bot.entity && !baseAnchor) {
+      baseAnchor = bot.entity.position.clone();
+      console.log(`[Base Guard] Base spawn anchor locked at: ${baseAnchor.floored()}`);
+    }
     startMovementLoop();
     try {
       if (!isMuted) {
@@ -1344,7 +1353,10 @@ function checkPlayerProximity() {
 const HOSTILE_MOBS = new Set([
   'zombie', 'skeleton', 'spider', 'cave_spider', 'creeper',
   'drowned', 'husk', 'phantom', 'witch', 'slime', 'magma_cube',
-  'pillager', 'vindicator', 'ravager'
+  'pillager', 'vindicator', 'ravager', 'evoker', 'vex',
+  'zombie_villager', 'bogged', 'breeze', 'stray', 'enderman',
+  'silverfish', 'endermite', 'hoglin', 'zoglin', 'piglin_brute',
+  'wither_skeleton', 'blaze', 'ghast'
 ]);
 
 const FOOD_NAMES = new Set([
@@ -1353,13 +1365,30 @@ const FOOD_NAMES = new Set([
   'cookie', 'cooked_salmon', 'cooked_cod', 'carrot'
 ]);
 
-// Auto-equip best weapon (sword or axe)
+// Auto-equip best weapon (sword or axe). In Creative mode, auto-conjures a Netherite Sword if needed.
 async function equipBestWeapon() {
   if (!bot || !bot.inventory) return;
+
   const weapon = bot.inventory.items().find(i => i.name.endsWith('_sword') || i.name.endsWith('_axe'));
   if (weapon) {
     try {
       await bot.equip(weapon, 'hand');
+      return;
+    } catch (_) {}
+  }
+
+  // If in creative mode and has no weapon, conjure a Netherite Sword in hotbar
+  if (bot.game && bot.game.gameMode === 'creative' && bot.creative && bot.registry) {
+    try {
+      const Item = require('prismarine-item')(bot.registry);
+      const swordItem = bot.registry.itemsByName['netherite_sword'] || bot.registry.itemsByName['diamond_sword'];
+      if (swordItem) {
+        await bot.creative.setInventorySlot(36, new Item(swordItem.id, 1));
+        const newSword = bot.inventory.items().find(i => i.name.endsWith('_sword'));
+        if (newSword) {
+          await bot.equip(newSword, 'hand');
+        }
+      }
     } catch (_) {}
   }
 }
@@ -1406,51 +1435,116 @@ async function autoEatFood() {
   }
 }
 
-// Combat loop: detects nearby mobs, attacks them, retreats from creepers (silent defense)
+// ⚔️ AGGRESSIVE CREATIVE COMBAT & PERIMETER DEFENSE SYSTEM
 async function checkCombatAndMobs() {
-  if (!bot || !bot.entity || bot.isSleeping || isEating) return;
+  if (!bot || !bot.entity || bot.isSleeping || isSprintingToBed) return;
 
-  // Find nearest hostile mob within 5.5 blocks
+  const currentPos = bot.entity.position;
+  const anchor = baseAnchor || currentPos;
+
+  // 1. Scan for nearest hostile mob within COMBAT_DETECTION_RADIUS (16 blocks of RamLaal)
   let nearestHostile = null;
-  let nearestDist = 5.5;
+  let nearestDist = COMBAT_DETECTION_RADIUS;
 
   for (const entity of Object.values(bot.entities)) {
-    if (!entity || entity === bot.entity) continue;
+    if (!entity || entity === bot.entity || !entity.isValid) continue;
     if (HOSTILE_MOBS.has(entity.name)) {
-      const dist = bot.entity.position.distanceTo(entity.position);
-      if (dist < nearestDist) {
-        nearestDist = dist;
+      const distFromBot = currentPos.distanceTo(entity.position);
+      const distFromBase = anchor.distanceTo(entity.position);
+
+      // Engage if mob is within 16 blocks of RamLaal AND within MAX_CHASE_DISTANCE (32 blocks) of base anchor
+      if (distFromBot < nearestDist && distFromBase <= MAX_CHASE_DISTANCE) {
+        nearestDist = distFromBot;
         nearestHostile = entity;
       }
     }
   }
 
-  if (!nearestHostile) return;
+  // 2. COMBAT ENGAGEMENT: Hostile mob detected! Charge aggressively!
+  if (nearestHostile) {
+    isFightingMobs = true;
+    isReturningToBase = false;
+    currentCombatTarget = nearestHostile;
 
-  // 1. CREEPER TACTICAL RETREAT (Don't let base blow up!)
-  if (nearestHostile.name === 'creeper') {
-    // Run backward / away from creeper
-    const dx = nearestHostile.position.x - bot.entity.position.x;
-    const dz = nearestHostile.position.z - bot.entity.position.z;
-    const yawAway = Math.atan2(dx, dz); // away direction
-    bot.look(yawAway, 0, true);
-    bot.setControlState('forward', true);
-    bot.setControlState('sprint', true);
-    setTimeout(() => {
-      if (bot) {
-        bot.setControlState('forward', false);
-        bot.setControlState('sprint', false);
+    await equipBestWeapon();
+
+    // Aim precisely at the mob's upper body
+    const targetPos = nearestHostile.position.offset(0, nearestHostile.height * 0.75, 0);
+    const dx = targetPos.x - currentPos.x;
+    const dz = targetPos.z - currentPos.z;
+    const yaw = Math.atan2(-dx, -dz);
+    const pitch = Math.atan2(targetPos.y - (currentPos.y + 1.6), Math.sqrt(dx * dx + dz * dz));
+
+    bot.look(yaw, -pitch, true);
+
+    // If within strike reach (<= 3.8 blocks): CRITICAL JUMP ATTACK & RAPID COMBOS!
+    if (nearestDist <= 3.8) {
+      // In Minecraft, jumping and attacking deals a Critical Hit (150% damage + crit particles)!
+      bot.setControlState('jump', true);
+      bot.attack(nearestHostile);
+      bot.swingArm('right');
+
+      // Keep forward sprint pressed to apply maximum aggression & pressure
+      bot.setControlState('forward', true);
+      bot.setControlState('sprint', true);
+    } else {
+      // SPRINT CHARGE TOWARDS MOB AT FULL SPEED!
+      bot.setControlState('forward', true);
+      bot.setControlState('sprint', true);
+
+      // Auto-jump over 1-block steps during the chase
+      const obs = checkObstacleAhead();
+      if (obs.isStep) {
+        bot.setControlState('jump', true);
+      } else {
+        bot.setControlState('jump', false);
       }
-    }, 1200);
+    }
     return;
   }
 
-  // 2. ATTACK HOSTILE MOB (Zombie, Skeleton, Spider, etc.)
-  if (nearestDist <= 4.0) {
-    await equipBestWeapon();
-    bot.lookAt(nearestHostile.position.offset(0, nearestHostile.height * 0.8, 0));
-    bot.attack(nearestHostile);
-    bot.swingArm('right');
+  // 3. NO HOSTILE MOBS NEARBY:
+  if (isFightingMobs) {
+    // Just finished combat! Mobs eliminated
+    isFightingMobs = false;
+    currentCombatTarget = null;
+    bot.clearControlStates();
+    console.log('[Combat AI] All nearby hostile mobs defeated! Returning to base anchor...');
+  }
+
+  // 4. RETURN TO BASE ANCHOR (Spawn Location)
+  if (baseAnchor) {
+    const distFromBase = currentPos.distanceTo(baseAnchor);
+
+    // If RamLaal drifted or chased mobs past the base patrol limit (> BASE_PATROL_RADIUS)
+    if (distFromBase > BASE_PATROL_RADIUS) {
+      isReturningToBase = true;
+
+      const dx = baseAnchor.x - currentPos.x;
+      const dz = baseAnchor.z - currentPos.z;
+      const yawTowardsBase = Math.atan2(-dx, -dz);
+
+      bot.look(yawTowardsBase, 0, true);
+      bot.setControlState('forward', true);
+      bot.setControlState('sprint', true);
+
+      // Auto-jump over obstacles while heading back home
+      const obs = checkObstacleAhead();
+      if (obs.isStep) {
+        bot.setControlState('jump', true);
+      } else if (obs.isWall) {
+        // Slight detour if hit a wall directly
+        bot.look(yawTowardsBase + (Math.random() > 0.5 ? 0.7 : -0.7), 0, true);
+        bot.setControlState('jump', true);
+      } else {
+        bot.setControlState('jump', false);
+      }
+    } else if (isReturningToBase) {
+      // Safely arrived back inside base perimeter!
+      isReturningToBase = false;
+      bot.clearControlStates();
+      console.log(`[Base Guard] RamLaal returned safely home! Distance to base center: ${distFromBase.toFixed(1)} blocks.`);
+    }
   }
 }
 
@@ -1657,16 +1751,17 @@ function startMovementLoop() {
     console.log(`[Base Guard] Base anchor locked at: ${baseAnchor.floored()}`);
   }
 
-  // Fast Combat & Self-Defense Loop (Every 350ms)
+  // Fast Combat & Self-Defense Loop (Every 250ms for aggressive pursuit & combo crits)
   combatInterval = setInterval(() => {
     try {
       checkCombatAndMobs();
     } catch (_) {}
-  }, 350);
+  }, 250);
 
   // Natural Base Patrol & Guard AI (Every 4.5 seconds)
   movementInterval = setInterval(async () => {
-    if (!bot || !bot.entity || bot.isSleeping || isEating) return;
+    // Pause normal patrol when sleeping, eating, fighting hostiles, or returning to base
+    if (!bot || !bot.entity || bot.isSleeping || isEating || isFightingMobs || isReturningToBase) return;
 
     try {
       // 1. Check health and eat if needed
@@ -1678,7 +1773,7 @@ function startMovementLoop() {
       // 3. Check player proximity
       checkPlayerProximity();
 
-      // 4. Update base anchor if near bed
+      // 4. Update base anchor if near bed and anchor not set
       const bed = findNearbyBed();
       if (bed && !baseAnchor) {
         baseAnchor = bed.position.clone();
@@ -1690,13 +1785,7 @@ function startMovementLoop() {
 
       const distFromBase = bot.entity.position.distanceTo(baseAnchor);
 
-      // 1. If RamLaal was teleported or spawned far away (> 15 blocks), update anchor to current spot!
-      if (distFromBase > 15) {
-        baseAnchor = bot.entity.position.clone();
-        console.log(`[Base Guard] Position shifted > 15 blocks. Re-anchored to current location: ${baseAnchor.floored()}`);
-      }
-
-      // 2. If drifted past patrol radius (5-7 blocks), gently face towards base center
+      // If drifted past patrol radius (5-7 blocks), gently face towards base center
       if (distFromBase > BASE_PATROL_RADIUS) {
         const dx = baseAnchor.x - bot.entity.position.x;
         const dz = baseAnchor.z - bot.entity.position.z;
@@ -1770,6 +1859,9 @@ function stopMovementLoop() {
     clearInterval(combatInterval);
     combatInterval = null;
   }
+  isFightingMobs = false;
+  isReturningToBase = false;
+  currentCombatTarget = null;
   if (bot) {
     try {
       bot.clearControlStates();
