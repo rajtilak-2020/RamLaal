@@ -559,6 +559,24 @@ let isMuted = config.isMuted;
 let baseAnchor = null;
 const BASE_PATROL_RADIUS = 7; // Max distance in blocks from base center
 
+// Central Safe Chat Handler - Strictly respects isMuted state and handles uninitialized bot.chat safely
+function safeChat(message, force = false) {
+  if (!bot || !message) return;
+  if (isMuted && !force) {
+    console.log(`[Muted - Chat Suppressed]: ${message}`);
+    return;
+  }
+  try {
+    if (typeof bot.chat === 'function') {
+      bot.chat(message, force);
+    } else {
+      console.warn(`[Chat Notice] Chat not available yet, dropped: ${message}`);
+    }
+  } catch (err) {
+    console.warn(`[Chat Error] ${err.message}`);
+  }
+}
+
 function createBot() {
   cleanupTimers();
 
@@ -577,22 +595,23 @@ function createBot() {
 
   bot = mineflayer.createBot(botOptions);
 
-  // Hook bot.chat to strictly respect isMuted state
-  const originalChat = bot.chat.bind(bot);
-  bot.chat = function (msg, force = false) {
-    if (isMuted && !force) {
-      console.log(`[Muted - Chat Suppressed]: ${msg}`);
-      return;
-    }
-    try {
-      originalChat(msg);
-    } catch (err) {
-      console.warn(`[Chat Error] ${err.message}`);
-    }
-  };
-
-  bot.on('login', () => {
+  bot.once('login', () => {
     console.log(`[Bot] Logged into ${config.host}:${config.port} successfully!`);
+    // Safe hook on bot.chat once initialized and available
+    if (typeof bot.chat === 'function' && !bot._originalChat) {
+      bot._originalChat = bot.chat.bind(bot);
+      bot.chat = function (msg, force = false) {
+        if (isMuted && !force) {
+          console.log(`[Muted - Chat Suppressed]: ${msg}`);
+          return;
+        }
+        try {
+          bot._originalChat(msg);
+        } catch (err) {
+          console.warn(`[Chat Error] ${err.message}`);
+        }
+      };
+    }
   });
 
   // Auto-detect when RamLaal is teleported (e.g. /tp) and lock new base anchor
