@@ -7,8 +7,8 @@ const mineflayer = require('mineflayer');
 
 // Configuration from environment variables
 const config = {
-  host: process.env.MC_HOST || 'localhost',
-  port: parseInt(process.env.MC_PORT, 10) || 25565,
+  host: process.env.MC_HOST || 'mc.krajtilak.in',
+  port: parseInt(process.env.MC_PORT, 10) || 35529,
   username: process.env.MC_USERNAME || 'RamLaal',
   version: process.env.MC_VERSION || false, // false enables auto-detection
   auth: process.env.MC_AUTH || 'offline',    // 'offline' for cracked Aternos servers
@@ -645,7 +645,7 @@ function createBot() {
     startMovementLoop();
     try {
       if (!isMuted) {
-        bot.chat("RamLaal AI Core Loaded! Namaste sabhi ko 🤖🙏");
+        safeChat("RamLaal AI Core Loaded! Namaste sabhi ko 🤖🙏");
       }
     } catch (_) {}
   });
@@ -691,7 +691,7 @@ function createBot() {
       if (now - lastDeathRoast > 45000) {
         lastDeathRoast = now;
         try {
-          bot.chat(getRandom(allDeathObserverRoasts));
+          safeChat(getRandom(allDeathObserverRoasts));
         } catch (_) {}
       }
     }
@@ -710,7 +710,7 @@ function createBot() {
     console.log('[Bot] Bot died. Respawning...');
     stopMovementLoop();
     try {
-      if (!isMuted) bot.chat(getRandom(deathMessages));
+      if (!isMuted) safeChat(getRandom(deathMessages));
     } catch (_) {}
     setTimeout(() => {
       if (bot) bot.respawn();
@@ -826,7 +826,7 @@ function handlePlayerChat(username, message) {
     isMuted = true;
     lookAtPlayer(username);
     nodHead();
-    bot.chat(`🤐 RamLaal is now completely MUTED! Ab mai chat me kuch nahi bolunga. Unmute karne ke liye '!unmute' ya 'bol' likho.`, true);
+    safeChat(`🤐 RamLaal is now completely MUTED! Ab mai chat me kuch nahi bolunga. Unmute karne ke liye '!unmute' ya 'bol' likho.`, true);
     return;
   }
 
@@ -840,7 +840,7 @@ function handlePlayerChat(username, message) {
     lookAtPlayer(username);
     waveArm();
     friendlyCrouchGreeting();
-    bot.chat(`🗣️ RamLaal is now UNMUTED! Namaste ${username} bhai, mai wapas bol sakta hu! Bolo kya seva karein? 😊✨`, true);
+    safeChat(`🗣️ RamLaal is now UNMUTED! Namaste ${username} bhai, mai wapas bol sakta hu! Bolo kya seva karein? 😊✨`, true);
     return;
   }
 
@@ -849,7 +849,7 @@ function handlePlayerChat(username, message) {
   // ==========================================
   if (text === '!status') {
     lookAtPlayer(username);
-    bot.chat(`🤖 [RamLaal Status]: Muted: ${isMuted ? 'YES 🤐 (!unmute to speak)' : 'NO 🗣️ (!mute to silence)'} | Base Anchor: ${baseAnchor ? 'Locked 🏡' : 'Not set'} | Health: ${bot.health || 20}/20 ❤️`, true);
+    safeChat(`🤖 [RamLaal Status]: Muted: ${isMuted ? 'YES 🤐 (!unmute to speak)' : 'NO 🗣️ (!mute to silence)'} | Base Anchor: ${baseAnchor ? 'Locked 🏡' : 'Not set'} | Health: ${bot.health || 20}/20 ❤️`, true);
     return;
   }
 
@@ -858,7 +858,7 @@ function handlePlayerChat(username, message) {
   // ==========================================
   if (text === '!help' || text === '!commands') {
     lookAtPlayer(username);
-    bot.chat(`📋 [RamLaal Commands]: !mute, !unmute, !status, !setbase, !sleep, !wake, !hug, !pat, !flower, !sing, !compliment, !twerk, !jump, !spin, !fight, !iq, !roast, !calc, !toss`, true);
+    safeChat(`📋 [RamLaal Commands]: !mute, !unmute, !status, !setbase, !sleep, !wake, !hug, !pat, !flower, !sing, !compliment, !twerk, !jump, !spin, !fight, !iq, !roast, !calc, !toss`, true);
     return;
   }
 
@@ -868,7 +868,7 @@ function handlePlayerChat(username, message) {
     if (bot && bot.entity) {
       baseAnchor = bot.entity.position.clone();
       waveArm();
-      bot.chat(`Theek hai ${username} bhai! Ye mera naya base spot hai. Ab mai yahin ghoomunga aur base ki shaan banunga 🏡📍✨`);
+      safeChat(`Theek hai ${username} bhai! Ye mera naya base spot hai. Ab mai yahin ghoomunga aur base ki shaan banunga 🏡📍✨`);
     }
     return;
   }
@@ -883,7 +883,7 @@ function handlePlayerChat(username, message) {
       `*Big warm hug* 🤗✨ Tum sabse pyare player ho ${username}!`,
       `Arey aao gale lago ${username} bhai! Dil khush kar diya tumne! ❤️🥰`
     ];
-    bot.chat(getRandom(hugReplies));
+    safeChat(getRandom(hugReplies));
     return;
   }
 
@@ -896,7 +896,7 @@ function handlePlayerChat(username, message) {
       `Awww thank you ${username}! RamLaal feels so loved right now! 🐾💖`,
       `Yay headpats! *wags imaginary tail* Tum kitne acche ho! 🥰`
     ];
-    bot.chat(getRandom(patReplies));
+    safeChat(getRandom(patReplies));
     return;
   }
 
@@ -909,7 +909,7 @@ function handlePlayerChat(username, message) {
       `Tumhare liye ek sundar red rose 🌹 Kyunki tum base ke sabse acche dost ho!`,
       `Special flower delivery for ${username}! 🌻✨ Enjoy karo!`
     ];
-    bot.chat(getRandom(flowerReplies));
+    safeChat(getRandom(flowerReplies));
     return;
   }
 
@@ -922,7 +922,7 @@ function handlePlayerChat(username, message) {
       `Chhoti si aasha, dher saare diamonds! RamLaal gaata hai sabke liye pyaar se! 🎵✨`,
       `Twinkle twinkle little star, tum sab log ho superstar! 🌟🎶`
     ];
-    bot.chat(getRandom(songs));
+    safeChat(getRandom(songs));
     return;
   }
 
@@ -935,7 +935,7 @@ function handlePlayerChat(username, message) {
       `${username}, tum is pure server ke sabse pyare aur mehnati player ho! 💖`,
       `Agar Minecraft me 'Best Player Award' hota toh pakka ${username} ko milta! 🏆🥰`
     ];
-    bot.chat(getRandom(sweetLines));
+    safeChat(getRandom(sweetLines));
     return;
   }
 
@@ -951,7 +951,7 @@ function handlePlayerChat(username, message) {
     if (bot.isSleeping) {
       bot.wake().catch(() => {});
     } else {
-      bot.chat(`Abe aalsi ${username}, mai to kabse jaag raha hu!`);
+      safeChat(`Abe aalsi ${username}, mai to kabse jaag raha hu!`);
     }
     return;
   }
@@ -959,7 +959,7 @@ function handlePlayerChat(username, message) {
   // 2. Twerk / Crouch Action
   if (text === '!twerk' || text.includes('twerk') || text.includes('mujra') || text.includes('crouch')) {
     lookAtPlayer(username);
-    bot.chat(`RamLaal Twerk Protocol Activated! 💃🕺`);
+    safeChat(`RamLaal Twerk Protocol Activated! 💃🕺`);
     doTwerk();
     return;
   }
@@ -974,7 +974,7 @@ function handlePlayerChat(username, message) {
       `DJ wale babu mera gaana chala do! 🕺✨`,
       `Jump to maar diya, ab 1 diamond fees nikaal ${username}!`
     ];
-    bot.chat(getRandom(jumpReplies));
+    safeChat(getRandom(jumpReplies));
     return;
   }
 
@@ -982,14 +982,14 @@ function handlePlayerChat(username, message) {
   if (text === '!fight' || text.includes('fight') || text.includes('punch') || text.includes('maar') || text.includes('lad')) {
     lookAtPlayer(username);
     doPunch();
-    bot.chat(`Aaja ${username} maidaan me! RamLaal boxing champion of Aternos hai! 🥊💥`);
+    safeChat(`Aaja ${username} maidaan me! RamLaal boxing champion of Aternos hai! 🥊💥`);
     return;
   }
 
   // 5. Spin / Ghoom
   if (text === '!spin' || text.includes('spin') || text.includes('ghoom') || text.includes('beyblade')) {
     lookAtPlayer(username);
-    bot.chat(`Beyblade mode ON! 🌪️`);
+    safeChat(`Beyblade mode ON! 🌪️`);
     doSpin();
     return;
   }
@@ -997,14 +997,14 @@ function handlePlayerChat(username, message) {
   // 6. Shayari Generator
   if (text === '!shayari' || text.includes('shayari') || text.includes('poem') || text.includes('kavita')) {
     lookAtPlayer(username);
-    bot.chat(getRandom(shayaris));
+    safeChat(getRandom(shayaris));
     return;
   }
 
   // 7. Fortune / Kismat Predictor
   if (text === '!fortune' || text.includes('kismat') || text.includes('future') || text.includes('bhavishya')) {
     lookAtPlayer(username);
-    bot.chat(getRandom(fortunes));
+    safeChat(getRandom(fortunes));
     return;
   }
 
@@ -1013,11 +1013,11 @@ function handlePlayerChat(username, message) {
     lookAtPlayer(username);
     const fakeIQ = Math.floor(Math.random() * 140) + 10;
     if (fakeIQ < 40) {
-      bot.chat(`🧠 [AI Brain Scan]: ${username} ka IQ = ${fakeIQ}. Arey baap re! Dirt block me bhi zyada dimaag hota hai 💀`);
+      safeChat(`🧠 [AI Brain Scan]: ${username} ka IQ = ${fakeIQ}. Arey baap re! Dirt block me bhi zyada dimaag hota hai 💀`);
     } else if (fakeIQ < 90) {
-      bot.chat(`🧠 [AI Brain Scan]: ${username} ka IQ = ${fakeIQ}. Average noob spotted! Thoda almond khaya karo.`);
+      safeChat(`🧠 [AI Brain Scan]: ${username} ka IQ = ${fakeIQ}. Average noob spotted! Thoda almond khaya karo.`);
     } else {
-      bot.chat(`🧠 [AI Brain Scan]: ${username} ka IQ = ${fakeIQ}. Wah bhai, Einstein ke baad tumhara hi number hai! 🗿✨`);
+      safeChat(`🧠 [AI Brain Scan]: ${username} ka IQ = ${fakeIQ}. Wah bhai, Einstein ke baad tumhara hi number hai! 🗿✨`);
     }
     return;
   }
@@ -1025,7 +1025,7 @@ function handlePlayerChat(username, message) {
   // 9. Coin Toss
   if (text === '!toss' || text === '!coin' || text.includes('toss') || text.includes('coin')) {
     const outcome = Math.random() < 0.5 ? 'HEADS (Sir)' : 'TAILS (Poonch)';
-    bot.chat(`🪙 Coin flipped! Result is: ${outcome}`);
+    safeChat(`🪙 Coin flipped! Result is: ${outcome}`);
     return;
   }
 
@@ -1036,12 +1036,12 @@ function handlePlayerChat(username, message) {
       // Safe math evaluation with sanitized characters
       if (/^[0-9+\-*/().\s]+$/.test(expr)) {
         const result = Function(`'use strict'; return (${expr})`)();
-        bot.chat(`🧠 [AI Computation]: ${expr} = ${result}. Itna aasaan sawal nursery ka baccha bhi kar leta! 🤖`);
+        safeChat(`🧠 [AI Computation]: ${expr} = ${result}. Itna aasaan sawal nursery ka baccha bhi kar leta! 🤖`);
       } else {
-        bot.chat("Abe sahi maths likh! NASA ke rocket formula mat daal yahan.");
+        safeChat("Abe sahi maths likh! NASA ke rocket formula mat daal yahan.");
       }
     } catch (_) {
-      bot.chat("Calculation error! Tumhare sawal ne mera AI brain hang kar diya.");
+      safeChat("Calculation error! Tumhare sawal ne mera AI brain hang kar diya.");
     }
     return;
   }
@@ -1061,7 +1061,7 @@ function handlePlayerChat(username, message) {
       `${target} wahi banda hai jo lava ke bagal me lakdi ka ghar banata hai 🪵🔥`,
       `${target} se accha PvP toh Minecraft ka villager 'Hrrrm' bol ke kar leta hai! 🤡`
     ];
-    bot.chat(getRandom(roasts));
+    safeChat(getRandom(roasts));
     return;
   }
 
@@ -1079,7 +1079,7 @@ function handlePlayerChat(username, message) {
       `Arey ${username} bhai, itna gussa kyu? Thanda paani piyo aur mining karo!`,
       `Abe chal nikal, tere jaise 50 dekhe hain maine!`
     ];
-    bot.chat(getRandom(roastReplies));
+    safeChat(getRandom(roastReplies));
     return;
   }
 
@@ -1094,21 +1094,21 @@ function handlePlayerChat(username, message) {
       `Ghar se ameer, dil se fakeer hu mai bhai. Kuch nahi hai mere paas 🥲`,
       `Pehle mujhe netherite armor pehna, fir maangna diamond!`
     ];
-    bot.chat(getRandom(beggarReplies));
+    safeChat(getRandom(beggarReplies));
     return;
   }
 
   // 14. Creator / Who made you
   if (text.includes('who made') || text.includes('tera baap') || text.includes('creator') || text.includes('developer') || text.includes('kisne banaya')) {
     lookAtPlayer(username);
-    bot.chat(`Mujhe krajtilak ne banaya hai! The supreme creator and coding master of this server 👑💻`);
+    safeChat(`Mujhe krajtilak ne banaya hai! The supreme creator and coding master of this server 👑💻`);
     return;
   }
 
   // 15. Girlfriend / Crush / Love
   if (text.includes('girlfriend') || text.includes('crush') || text.includes('shadi') || text.includes('gf')) {
     lookAtPlayer(username);
-    bot.chat(`Alex meri crush thi par wo Steve ke saath bhaag gayi... dard, dukh, peeda 💔😭`);
+    safeChat(`Alex meri crush thi par wo Steve ke saath bhaag gayi... dard, dukh, peeda 💔😭`);
     return;
   }
 
@@ -1123,7 +1123,7 @@ function handlePlayerChat(username, message) {
       `Wassup ${username}! Server pe aate hi RamLaal ki yaad aa gayi? 🗿`,
       `Arre aao aao ${username}, tumhare bina server bohot sunsaan lag raha tha!`
     ];
-    bot.chat(getRandom(greetReplies));
+    safeChat(getRandom(greetReplies));
     return;
   }
 
@@ -1138,7 +1138,7 @@ function handlePlayerChat(username, message) {
       `Arey bas kar pagle ${username}, itni tareef sunke meri aankho me aansu aa gaye ❤️`,
       `Pata hai mujhe mai OP hu, aage se salute thok ke baat karna!`
     ];
-    bot.chat(getRandom(praiseReplies));
+    safeChat(getRandom(praiseReplies));
     return;
   }
 
@@ -1149,7 +1149,7 @@ function handlePlayerChat(username, message) {
       `Bye ${username}! Server band mat hone dena varna bhoot le jayega tujhe!`,
       `Alvida dost! Sapno me aake tumhe Creeper se katwaunga 💥`
     ];
-    bot.chat(getRandom(byeReplies));
+    safeChat(getRandom(byeReplies));
     return;
   }
 
@@ -1163,7 +1163,7 @@ function handlePlayerChat(username, message) {
       `Bolo ${username} babu, kisne sataya tumhe?`,
       `Haa bhai bol, sun raha hu mai!`
     ];
-    bot.chat(getRandom(nameReplies));
+    safeChat(getRandom(nameReplies));
   }
 }
 
@@ -1182,13 +1182,13 @@ async function goToSleep(silent = false) {
   const isThunder = bot.isRaining && (bot.thunderState > 0);
 
   if (!isNight && !isThunder) {
-    if (!silent) bot.chat(getRandom(notNightMessages));
+    if (!silent) safeChat(getRandom(notNightMessages));
     return;
   }
 
   const bed = findNearbyBed();
   if (!bed) {
-    if (!silent) bot.chat(getRandom(noBedMessages));
+    if (!silent) safeChat(getRandom(noBedMessages));
     console.log('[Bed] No bed found within 4 blocks.');
     return;
   }
@@ -1201,7 +1201,7 @@ async function goToSleep(silent = false) {
     console.log('[Bed] RamLaal is now sleeping in bed!');
   } catch (err) {
     console.warn(`[Bed Error] ${err.message}`);
-    if (!silent && !isMuted) bot.chat(`Abe so nahi pa raha hu: ${err.message}`);
+    if (!silent && !isMuted) safeChat(`Abe so nahi pa raha hu: ${err.message}`);
     if (!bot.isSleeping) {
       startMovementLoop();
     }
@@ -1472,7 +1472,7 @@ async function humanChat(message, lookAtTarget = null, force = false) {
   await sleep(typingMs);
   if (isMuted && !force) return;
   try {
-    bot.chat(message, force);
+    safeChat(message, force);
   } catch (_) {}
 }
 
