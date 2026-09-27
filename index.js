@@ -564,6 +564,12 @@ let isFightingMobs = false;
 let isReturningToBase = false;
 let currentCombatTarget = null;
 
+// Sleeping Player Tracking & Morning Chest Deposit
+const sleepingPlayers = new Set();
+let lastOtherPlayerSleepTime = 0;
+let hasClearedChestToday = false;
+let isDepositingChest = false;
+
 // Central Safe Chat Handler - Strictly respects isMuted state and handles uninitialized bot.chat safely
 function safeChat(message, force = false) {
   if (!bot || !message) return;
@@ -659,22 +665,87 @@ function createBot() {
     } catch (_) {}
   });
 
-  // Bed and Sleep Handlers (Instant Bed Sprint on Nightfall)
+  // Bed & Sleep Handlers (Sprints to bed ONLY when at least one other player on the server is sleeping)
   bot.on('time', () => {
-    if (!bot || bot.isSleeping || isSprintingToBed) return;
+    if (!bot || bot.isSleeping || isSprintingToBed || isDepositingChest) return;
 
-    const isNight = bot.time && (bot.time.timeOfDay >= 12541 && bot.time.timeOfDay <= 23458);
-    const isThunder = bot.isRaining && (bot.thunderState > 0);
+    // Check if another player is sleeping during night/thunder
+    checkSleepTrigger();
 
-    // Instant sprint trigger as soon as night begins!
-    if (isNight || isThunder) {
-      sprintToBedAndSleep();
+    // Morning check: if dawn arrived and chest not cleared yet
+    const isDay = bot.time && (bot.time.timeOfDay < 12541 || bot.time.timeOfDay > 23458);
+    if (isDay && !hasClearedChestToday && bot.time.timeOfDay < 1500) {
+      hasClearedChestToday = true;
+      clearInventoryToChest();
+    }
+    if (!isDay) {
+      hasClearedChestToday = false;
     }
   });
 
-  bot.on('wake', () => {
-    console.log('[Bed] RamLaal woke up! Resuming movement...');
-    // Silently wake up and resume patrol without spamming chat
+  // Track sleeping players across the server
+  bot.on('entitySleep', (entity) => {
+    if (!bot || !entity || entity === bot.entity) return;
+    if (entity.type === 'player' || (entity.username && entity.username !== bot.username)) {
+      const name = entity.username || entity.name || String(entity.id);
+      sleepingPlayers.add(name);
+      lastOtherPlayerSleepTime = Date.now();
+      console.log(`[Bed Detection] Player ${name} is sleeping in bed! (Total sleeping: ${sleepingPlayers.size})`);
+      checkSleepTrigger();
+    }
+  });
+
+  bot.on('entityWake', (entity) => {
+    if (!bot || !entity || entity === bot.entity) return;
+    if (entity.type === 'player' || (entity.username && entity.username !== bot.username)) {
+      const name = entity.username || entity.name || String(entity.id);
+      sleepingPlayers.delete(name);
+      console.log(`[Bed Detection] Player ${name} woke up / left bed.`);
+    }
+  });
+
+  bot.on('entityGone', (entity) => {
+    if (entity && (entity.username || entity.name)) {
+      sleepingPlayers.delete(entity.username || entity.name);
+    }
+  });
+
+  bot.on('playerLeft', (player) => {
+    if (player && player.username) {
+      sleepingPlayers.delete(player.username);
+    }
+  });
+
+  // Server sleep notifications (Action bar "1/2 players sleeping" or chat broadcasts)
+  bot.on('actionBar', (msg) => {
+    if (!msg) return;
+    const text = msg.toString().toLowerCase();
+    if (text.includes('sleeping') || text.includes('players sleeping') || text.includes('so raha')) {
+      lastOtherPlayerSleepTime = Date.now();
+      console.log(`[Bed Detection] Action bar sleep announcement detected: "${text}"`);
+      checkSleepTrigger();
+    }
+  });
+
+  bot.on('message', (jsonMsg) => {
+    if (!jsonMsg) return;
+    const text = jsonMsg.toString().toLowerCase();
+    if ((text.includes('sleeping') && (text.includes('player') || text.includes('/'))) ||
+        text.includes('is sleeping') || text.includes('went to bed') || text.includes('bistar me')) {
+      lastOtherPlayerSleepTime = Date.now();
+      console.log(`[Bed Detection] Chat sleep announcement detected: "${text}"`);
+      checkSleepTrigger();
+    }
+  });
+
+  // Morning Wake Handler: Resumes movement and deposits all items to morning chest (excluding sword & armor)
+  bot.on('wake', async () => {
+    console.log('[Bed] RamLaal woke up! Resuming movement and clearing inventory to chest...');
+    sleepingPlayers.clear();
+    lastOtherPlayerSleepTime = 0;
+    hasClearedChestToday = true;
+    await sleep(800);
+    await clearInventoryToChest();
     startMovementLoop();
   });
 
@@ -858,7 +929,7 @@ function handlePlayerChat(username, message) {
   // ==========================================
   if (text === '!status') {
     lookAtPlayer(username);
-    safeChat(`🤖 [RamLaal Status]: Muted: ${isMuted ? 'YES 🤐 (!unmute to speak)' : 'NO 🗣️ (!mute to silence)'} | Base Anchor: ${baseAnchor ? 'Locked 🏡' : 'Not set'} | Health: ${bot.health || 20}/20 ❤️`, true);
+    safeChat(`🤖 [RamLaal Status]: Muted: ${isMuted ? 'YES 🤐 (!unmute to speak)' : 'NO 🗣️ (!mute to silence)'} | Base: ${baseAnchor ? 'Locked 🏡' : 'Not set'} | Sleeping Players: ${sleepingPlayers.size} | Health: ${bot.health || 20}/20 ❤️`, true);
     return;
   }
 
@@ -867,7 +938,15 @@ function handlePlayerChat(username, message) {
   // ==========================================
   if (text === '!help' || text === '!commands') {
     lookAtPlayer(username);
-    safeChat(`📋 [RamLaal Commands]: !mute, !unmute, !status, !setbase, !sleep, !wake, !hug, !pat, !flower, !sing, !compliment, !twerk, !jump, !spin, !fight, !iq, !roast, !calc, !toss`, true);
+    safeChat(`📋 [RamLaal Commands]: !mute, !unmute, !status, !setbase, !deposit, !sleep, !wake, !hug, !pat, !flower, !sing, !compliment, !twerk, !jump, !spin, !fight, !iq, !roast, !calc, !toss`, true);
+    return;
+  }
+
+  // Deposit Loot to Chest Command (!deposit, !chest, !clearinv)
+  if (text === '!deposit' || text === '!chest' || text === '!clearinv' || text.includes('chest me rakh') || text.includes('saman rakh')) {
+    lookAtPlayer(username);
+    safeChat('Haan bhai, chest me extra saman daal raha hu...', true);
+    clearInventoryToChest(false);
     return;
   }
 
@@ -1219,6 +1298,151 @@ async function goToSleep(silent = false) {
   }
 }
 
+// ==========================================
+// 🛌 SLEEP DETECTION & MORNING CHEST ROUTINE
+// ==========================================
+
+// Check if at least one other player on the server is currently sleeping
+function isAnyOtherPlayerSleeping() {
+  if (!bot) return false;
+
+  // 1. Check tracked sleeping players set (from entitySleep / wake events)
+  if (sleepingPlayers.size > 0) return true;
+
+  // 2. Check recent server sleep announcements (Action bar / chat broadcast within last 18 seconds)
+  if (lastOtherPlayerSleepTime > 0 && (Date.now() - lastOtherPlayerSleepTime < 18000)) {
+    return true;
+  }
+
+  // 3. Scan all loaded players in render distance
+  for (const player of Object.values(bot.players)) {
+    if (!player || player.username === bot.username || !player.entity) continue;
+    const entity = player.entity;
+    const isPoseSleeping = entity.metadata && (entity.metadata[6] === 2 || entity.metadata[0] === 2);
+    if (entity.isSleeping || isPoseSleeping) {
+      sleepingPlayers.add(player.username);
+      return true;
+    }
+  }
+
+  return false;
+}
+
+// Night sleep trigger: Sprint to bed ONLY if at least one other player on the server is sleeping!
+function checkSleepTrigger() {
+  if (!bot || !bot.entity || bot.isSleeping || isSprintingToBed || isDepositingChest) return;
+
+  const isNight = bot.time && (bot.time.timeOfDay >= 12541 && bot.time.timeOfDay <= 23458);
+  const isThunder = bot.isRaining && (bot.thunderState > 0);
+
+  // If night or thunder AND another player is sleeping, sprint to bed immediately
+  if ((isNight || isThunder) && isAnyOtherPlayerSleeping()) {
+    console.log('[Bed Trigger] At least one player is sleeping in bed! RamLaal is sprinting to bed...');
+    sprintToBedAndSleep();
+  }
+}
+
+// Find chest, trapped chest, or barrel within maxDist blocks
+function findNearbyChest(maxDist = 8) {
+  if (!bot) return null;
+  return bot.findBlock({
+    matching: block => {
+      if (!block || !block.name) return false;
+      return block.name === 'chest' || block.name === 'trapped_chest' || block.name === 'barrel';
+    },
+    maxDistance: maxDist
+  });
+}
+
+// Filter items to keep in inventory: Keep all swords, armor pieces, and shields
+function isExcludedFromChest(item) {
+  if (!item || !item.name) return false;
+  const name = item.name.toLowerCase();
+  if (name.endsWith('_sword')) return true;
+  if (name.endsWith('_helmet') || name === 'turtle_helmet') return true;
+  if (name.endsWith('_chestplate') || name === 'elytra') return true;
+  if (name.endsWith('_leggings')) return true;
+  if (name.endsWith('_boots')) return true;
+  if (name === 'shield') return true;
+  return false;
+}
+
+// Morning Chest Routine: Deposits all inventory loot to nearby chest, keeping only sword and armor
+async function clearInventoryToChest(silent = false) {
+  if (!bot || !bot.entity || isDepositingChest || bot.isSleeping) return;
+
+  isDepositingChest = true;
+  stopMovementLoop();
+
+  try {
+    let chestBlock = findNearbyChest(8);
+    if (!chestBlock) {
+      // Try searching slightly wider (up to 14 blocks around base or bed)
+      chestBlock = findNearbyChest(14);
+    }
+
+    if (!chestBlock) {
+      console.log('[Chest Deposit] No chest or barrel found nearby to store items.');
+      if (!silent && !isMuted) safeChat('Bhai paas me koi chest nahi mili saman rakhne ke liye!');
+      return;
+    }
+
+    console.log(`[Chest Deposit] Found chest at ${chestBlock.position}. Approaching and depositing loot...`);
+
+    // Walk towards chest if not close enough
+    const dist = bot.entity.position.distanceTo(chestBlock.position);
+    if (dist > 3.2) {
+      const chestCenter = chestBlock.position.offset(0.5, 0.5, 0.5);
+      const dx = chestCenter.x - bot.entity.position.x;
+      const dz = chestCenter.z - bot.entity.position.z;
+      const yaw = Math.atan2(-dx, -dz);
+      bot.look(yaw, 0, true);
+      await smartStepForward(700);
+      await sleep(200);
+    }
+
+    let chestWindow = null;
+    try {
+      chestWindow = await bot.openChest(chestBlock);
+    } catch (openErr) {
+      console.warn(`[Chest Deposit] Could not open chest: ${openErr.message}`);
+      return;
+    }
+
+    let depositedCount = 0;
+    let attempts = 0;
+    const maxAttempts = 36;
+
+    while (attempts < maxAttempts) {
+      attempts++;
+      const itemToDeposit = bot.inventory.items().find(i => !isExcludedFromChest(i));
+      if (!itemToDeposit) break; // All remaining items are sword/armor/shield
+
+      try {
+        await chestWindow.deposit(itemToDeposit.type, null, itemToDeposit.count);
+        depositedCount += itemToDeposit.count;
+        await sleep(100);
+      } catch (depErr) {
+        console.warn(`[Chest Deposit] Deposit error for ${itemToDeposit.name}: ${depErr.message}`);
+        break; // Chest might be full or slot error
+      }
+    }
+
+    try {
+      chestWindow.close();
+    } catch (_) {}
+
+    console.log(`[Chest Deposit] Morning deposit finished! Transferred ${depositedCount} items to chest.`);
+    if (depositedCount > 0 && !silent && !isMuted) {
+      safeChat(`Subah ho gayi! Maine chest me saara extra saman (${depositedCount} items) daal diya, bas talwar aur armor rakha hai 📦✨`);
+    }
+  } catch (err) {
+    console.warn(`[Chest Deposit Error] ${err.message}`);
+  } finally {
+    isDepositingChest = false;
+    startMovementLoop();
+  }
+}
 
 // 3D Vector Math: Detects if a player is looking in RamLaal's direction (Eye Contact)
 function isPlayerLookingAtBot(playerEntity) {
@@ -1760,8 +1984,8 @@ function startMovementLoop() {
 
   // Natural Base Patrol & Guard AI (Every 4.5 seconds)
   movementInterval = setInterval(async () => {
-    // Pause normal patrol when sleeping, eating, fighting hostiles, or returning to base
-    if (!bot || !bot.entity || bot.isSleeping || isEating || isFightingMobs || isReturningToBase) return;
+    // Pause normal patrol when sleeping, sprinting to bed, depositing items, eating, fighting hostiles, or returning to base
+    if (!bot || !bot.entity || bot.isSleeping || isEating || isFightingMobs || isReturningToBase || isDepositingChest || isSprintingToBed) return;
 
     try {
       // 1. Check health and eat if needed

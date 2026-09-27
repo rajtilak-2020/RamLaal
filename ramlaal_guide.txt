@@ -3,9 +3,10 @@
         (Share this with your server members & Discord friends!)
 ================================================================================
 
-RamLaal has reached MAXIMUM HUMAN REALISM! He now mirrors your body language,
-fidgets with his hotbar items, inspects your builds, and moves with organic
-human mouse physics!
+RamLaal is an ultra-realistic companion bot! He mirrors player body language,
+fidgets with hotbar items, inspects builds, fights hostile mobs fearlessly,
+sprints to bed ONLY when players sleep, and deposits his inventory to a chest
+every morning!
 
 --------------------------------------------------------------------------------
 🧍‍♂️ 1. BODY-LANGUAGE MIRRORING (He Copies Your Moves!)
@@ -35,8 +36,8 @@ human mouse physics!
   Smooth S-curve head turns with subtle micro-movements simulating a human hand
   resting on a mouse (no jerky robot snaps).
 • Hotbar Fidgeting:
-  Every 20-30 seconds, he switches items in his hand (tools, bread, flowers, etc.)
-  just like restless players cycling their 1-5 keys.
+  Every 20-30 seconds, he cycles items in his hand (tools, bread, flowers, etc.)
+  just like restless players cycling their 1-5 hotbar keys.
 • Realistic Typing Delays:
   Before he speaks in chat, he looks at you and pauses for 1-2 seconds,
   simulating real keyboard typing before sending his message!
@@ -54,18 +55,38 @@ human mouse physics!
 
 
 --------------------------------------------------------------------------------
-🏃‍♂️ 5. INSTANT SILENT NIGHT BED SPRINT
+🛌 5. PLAYER-TRIGGERED BED SPRINT (Sleeps ONLY when another player sleeps!)
 --------------------------------------------------------------------------------
-• The exact millisecond night falls, RamLaal detects it instantly.
-• He scans for his bed up to 18 blocks away.
-• He SPRINTS AT FULL SPEED directly to his bed and auto-jumps over any steps!
-• The moment he reaches the bed (< 3 blocks), he dives right in and skips the
-  night for everyone!
-• Completely silent: Zero goodnight or goodmorning chat spam! Peaceful sleep.
+• Awake All Night By Default:
+  ➔ RamLaal will NEVER go to sleep automatically just because it is night.
+     He stays awake guarding your base and enjoying the night!
+• Instant Sprint When ANY Player Sleeps:
+  ➔ The exact moment AT LEAST ONE player on the server gets into a bed,
+     RamLaal instantly detects it!
+  ➔ He sprints at top speed toward his nearby bed (up to 18 blocks away),
+     auto-jumping over obstacles, and hops in immediately to skip the night!
+• Manual Sleep Command:
+  ➔ You can also command him manually with "!sleep" or "soja" in chat.
 
 
 --------------------------------------------------------------------------------
-⚔️ 6. AGGRESSIVE BASE DEFENSE & AUTO-RETURN (CREATIVE BOSS MODE)
+📦 6. MORNING CHEST INVENTORY CLEANUP (Excludes Sword & Armor)
+--------------------------------------------------------------------------------
+• Automatic Morning Deposit:
+  ➔ Every morning when he wakes up (or at dawn), RamLaal walks over to the
+     chest or barrel placed near his bed/base.
+  ➔ He opens the chest and automatically deposits all mob drops, cobblestone,
+     dirt, and gathered items into the chest!
+• Equipment Protection (Keeps his gear!):
+  ➔ He will NEVER put his weapons or gear into the chest! All swords, helmets,
+     chestplates, leggings, boots, and shields remain safely in his possession.
+• On-Demand Deposit Command:
+  ➔ Type "!deposit", "!chest", or "!clearinv" in chat anytime to make him
+     store his inventory items into the nearby chest right away!
+
+
+--------------------------------------------------------------------------------
+⚔️ 7. AGGRESSIVE BASE DEFENSE & AUTO-RETURN (CREATIVE BOSS MODE)
 --------------------------------------------------------------------------------
 • Fearless Monster Hunter:
   ➔ RamLaal scans 16 blocks around him for ANY hostile mobs (Zombies, Creepers,
@@ -85,7 +106,7 @@ human mouse physics!
 
 
 --------------------------------------------------------------------------------
-🔇 7. MUTE & UNMUTE CHAT CONTROLS
+🔇 8. MUTE & UNMUTE CHAT CONTROLS
 --------------------------------------------------------------------------------
 Want total silence in the chat, or ready to chat again? Use these:
 
@@ -104,7 +125,7 @@ Want total silence in the chat, or ready to chat again? Use these:
 
 
 --------------------------------------------------------------------------------
-🥰 8. WHOLESOME & CUTE COMMANDS
+🥰 9. WHOLESOME & CUTE COMMANDS
 --------------------------------------------------------------------------------
 Type these in public chat to interact with him:
 
@@ -114,10 +135,11 @@ Type these in public chat to interact with him:
 • !sing (or "gaana")            ➔ Sings a cute funny Minecraft song! 🎶🎤
 • !compliment (or "tareef")     ➔ Tells you why you are the best player! 💖✨
 • !setbase (or "yahan raho")    ➔ Locks his home anchor to your current spot!
+• !deposit (or "!chest")        ➔ Deposits all non-gear items into nearby chest! 📦
 
 
 --------------------------------------------------------------------------------
-🕺 9. FUN MOVES & AI MINI-GAMES
+🕺 10. FUN MOVES & AI MINI-GAMES
 --------------------------------------------------------------------------------
 • !twerk (or "mujra")    ➔ Twerks up and down! 💃
 • !jump (or "dance")     ➔ Hops with joy! 🕺
