@@ -3,6 +3,9 @@ const http = require('http');
 const fs = require('fs');
 const path = require('path');
 const { Vec3 } = require('vec3');
+
+// Auto-verify Minecraft 26.3 compatibility before initializing bot
+try { require('./patch-26.3.js'); } catch (_) {}
 const mineflayer = require('mineflayer');
 
 // Configuration from environment variables
@@ -10,7 +13,7 @@ const config = {
   host: process.env.MC_HOST || 'mc.krajtilak.in',
   port: parseInt(process.env.MC_PORT, 10) || 35529,
   username: process.env.MC_USERNAME || 'RamLaal',
-  version: process.env.MC_VERSION || false, // false enables auto-detection
+  version: process.env.MC_VERSION || '26.3', // 26.3 for latest server update
   auth: process.env.MC_AUTH || 'offline',    // 'offline' for cracked Aternos servers
   reconnectDelay: parseInt(process.env.RECONNECT_DELAY_MS, 10) || 15000,
   httpPort: process.env.PORT || 3000,
@@ -802,6 +805,8 @@ function createBot() {
   });
 
   bot.on('error', (err) => {
+    // Ignore harmless advancements packet schema mismatch
+    if (err && err.message && (err.message.includes('0x85') || err.message.includes('packet_advancements'))) return;
     console.error(`[Bot Error] ${err.message}`);
   });
 
@@ -2128,14 +2133,14 @@ function sleep(ms) {
 process.on('SIGINT', () => {
   console.log('\n[System] Gracefully shutting down...');
   cleanupTimers();
-  if (bot) bot.quit();
+  if (bot && typeof bot.quit === 'function') bot.quit();
   process.exit(0);
 });
 
 process.on('SIGTERM', () => {
   console.log('\n[System] Termination signal received...');
   cleanupTimers();
-  if (bot) bot.quit();
+  if (bot && typeof bot.quit === 'function') bot.quit();
   process.exit(0);
 });
 

@@ -4,7 +4,8 @@
   "description": "AFK Mineflayer bot for Aternos servers with auto-reconnect and anti-AFK movement",
   "main": "index.js",
   "scripts": {
-    "start": "node index.js"
+    "start": "node index.js",
+    "postinstall": "node patch-26.3.js"
   },
   "keywords": [
     "minecraft",
@@ -16,6 +17,6 @@
   "license": "ISC",
   "dependencies": {
     "dotenv": "^16.4.7",
-    "mineflayer": "^4.39.0"
+    "mineflayer": "npm:@wp2508/mineflayer@^4.42.2"
   }
 }
