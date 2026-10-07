@@ -572,6 +572,7 @@ const sleepingPlayers = new Set();
 let lastOtherPlayerSleepTime = 0;
 let hasClearedChestToday = false;
 let isDepositingChest = false;
+let bedSprintInterval = null;
 
 // Central Safe Chat Handler - Strictly respects isMuted state and handles uninitialized bot.chat safely
 function safeChat(message, force = false) {
@@ -608,6 +609,36 @@ function createBot() {
   }
 
   bot = mineflayer.createBot(botOptions);
+
+  // Robust network packet normalizer & error silencer
+  if (bot._client) {
+    const origClientWrite = bot._client.write.bind(bot._client);
+    bot._client.write = function (name, params) {
+      if (name === 'block_place' && params) {
+        if (params.insideBlock === undefined) params.insideBlock = false;
+        if (params.worldBorderHit === undefined) params.worldBorderHit = false;
+        if (params.sequence === undefined) params.sequence = 0;
+        if (params.hand === undefined) params.hand = 0;
+        if (params.hitResult) {
+          const { hitResult, ...rest } = params;
+          params = { ...rest, ...hitResult };
+        }
+      }
+      return origClientWrite(name, params);
+    };
+
+    bot._client.on('error', (err) => {
+      if (!err) return;
+      const msg = err.message || '';
+      if (
+        msg.includes('0x85') ||
+        msg.includes('packet_advancements') ||
+        msg.includes('advancements') ||
+        msg.includes('array size is abnormally large') ||
+        msg.includes('Read error for')
+      ) return;
+    });
+  }
 
   bot.once('login', () => {
     console.log(`[Bot] Logged into ${config.host}:${config.port} successfully!`);
@@ -802,12 +833,20 @@ function createBot() {
 
   bot.on('kicked', (reason) => {
     console.warn(`[Bot] Kicked: ${JSON.stringify(reason)}`);
+    cleanupTimers();
   });
 
   bot.on('error', (err) => {
-    // Ignore harmless advancements packet schema mismatch
-    if (err && err.message && (err.message.includes('0x85') || err.message.includes('packet_advancements'))) return;
-    console.error(`[Bot Error] ${err.message}`);
+    if (!err || !err.message) return;
+    const msg = err.message || '';
+    if (
+      msg.includes('0x85') ||
+      msg.includes('packet_advancements') ||
+      msg.includes('advancements') ||
+      msg.includes('array size is abnormally large') ||
+      msg.includes('Read error for')
+    ) return;
+    console.error(`[Bot Error] ${msg}`);
   });
 
   bot.on('end', () => {
@@ -847,9 +886,9 @@ async function doSpin() {
   if (!bot || !bot.entity || bot.isSleeping) return;
   const originalYaw = bot.entity.yaw;
   for (let i = 0; i < 8; i++) {
-    bot.look(originalYaw + (i * Math.PI / 4), bot.entity.pitch, true);
+    if (!bot || !bot.entity || bot.isSleeping) return;
+    try { bot.look(originalYaw + (i * Math.PI / 4), bot.entity.pitch, true); } catch (_) {}
     await sleep(80);
-    if (!bot) return;
   }
 }
 
@@ -875,21 +914,25 @@ async function nodHead() {
   if (!bot || !bot.entity || bot.isSleeping) return;
   const originalPitch = bot.entity.pitch;
   try {
+    if (!bot || !bot.entity) return;
     bot.look(bot.entity.yaw, originalPitch + 0.4, true);
     await sleep(150);
+    if (!bot || !bot.entity) return;
     bot.look(bot.entity.yaw, originalPitch - 0.4, true);
     await sleep(150);
+    if (!bot || !bot.entity) return;
     bot.look(bot.entity.yaw, originalPitch, true);
   } catch (_) {}
 }
 
 // Human-like animation: Universal Minecraft friendly crouch-greeting
 async function friendlyCrouchGreeting() {
-  if (!bot || bot.isSleeping) return;
+  if (!bot || !bot.entity || bot.isSleeping) return;
   for (let i = 0; i < 3; i++) {
+    if (!bot || !bot.entity) return;
     bot.setControlState('sneak', true);
     await sleep(180);
-    if (!bot) return;
+    if (!bot || !bot.entity) return;
     bot.setControlState('sneak', false);
     await sleep(180);
   }
@@ -1401,9 +1444,10 @@ async function clearInventoryToChest(silent = false) {
       const dx = chestCenter.x - bot.entity.position.x;
       const dz = chestCenter.z - bot.entity.position.z;
       const yaw = Math.atan2(-dx, -dz);
-      bot.look(yaw, 0, true);
+      try { bot.look(yaw, 0, true); } catch (_) {}
       await smartStepForward(700);
       await sleep(200);
+      if (!bot || !bot.entity) return;
     }
 
     let chestWindow = null;
@@ -1808,6 +1852,7 @@ async function smoothLook(targetYaw, targetPitch, steps = 4) {
   const pitchDiff = targetPitch - currentPitch;
 
   for (let i = 1; i <= steps; i++) {
+    if (!bot || !bot.entity || bot.isSleeping) return;
     // S-curve easing (smooth ease-in-out)
     const t = i / steps;
     const ease = t * t * (3 - 2 * t);
@@ -1817,7 +1862,11 @@ async function smoothLook(targetYaw, targetPitch, steps = 4) {
 
     const y = currentYaw + (yawDiff * ease) + jitterYaw;
     const p = currentPitch + (pitchDiff * ease) + jitterPitch;
-    try { bot.look(y, p, true); } catch (_) {}
+    try {
+      if (bot && bot.entity && typeof bot.look === 'function') {
+        bot.look(y, p, true);
+      }
+    } catch (_) {}
     await sleep(35);
   }
 }
@@ -1848,7 +1897,8 @@ async function smartStepForward(durationMs = 700, sprint = false) {
   const obstacle = checkObstacleAhead();
   if (obstacle.isDrop) {
     // Avoid walking off cliffs or deep pits!
-    bot.look(bot.entity.yaw + Math.PI * (0.6 + Math.random() * 0.4), 0, true);
+    if (!bot || !bot.entity) return;
+    try { bot.look(bot.entity.yaw + Math.PI * (0.6 + Math.random() * 0.4), 0, true); } catch (_) {}
     return;
   }
 
@@ -1862,7 +1912,7 @@ async function smartStepForward(durationMs = 700, sprint = false) {
   }
 
   await sleep(durationMs);
-  if (!bot) return;
+  if (!bot || !bot.entity) return;
   bot.setControlState('forward', false);
   bot.setControlState('sprint', false);
   bot.setControlState('jump', false);
@@ -1872,10 +1922,11 @@ async function smartStepForward(durationMs = 700, sprint = false) {
   // If stuck against a wall
   if (movedDist < 0.15) {
     // Try hop
+    if (!bot || !bot.entity) return;
     bot.setControlState('jump', true);
     bot.setControlState('forward', true);
     await sleep(300);
-    if (!bot) return;
+    if (!bot || !bot.entity) return;
     bot.setControlState('jump', false);
     bot.setControlState('forward', false);
 
@@ -1883,7 +1934,7 @@ async function smartStepForward(durationMs = 700, sprint = false) {
       // Step backward and turn away from wall
       bot.setControlState('back', true);
       await sleep(350);
-      if (!bot) return;
+      if (!bot || !bot.entity) return;
       bot.setControlState('back', false);
       const turnAngle = (Math.PI * 0.5) + (Math.random() * Math.PI * 0.5);
       await smoothLook(bot.entity.yaw + turnAngle, 0, 2);
@@ -1917,10 +1968,18 @@ async function sprintToBedAndSleep() {
   let ticks = 0;
   const maxSprintTicks = 45; // ~4.5 seconds max
 
-  const sprintInterval = setInterval(async () => {
+  if (bedSprintInterval) {
+    clearInterval(bedSprintInterval);
+    bedSprintInterval = null;
+  }
+
+  bedSprintInterval = setInterval(async () => {
     ticks++;
     if (!bot || !bot.entity || bot.isSleeping) {
-      clearInterval(sprintInterval);
+      if (bedSprintInterval) {
+        clearInterval(bedSprintInterval);
+        bedSprintInterval = null;
+      }
       isSprintingToBed = false;
       return;
     }
@@ -1929,7 +1988,10 @@ async function sprintToBedAndSleep() {
 
     // If within sleep interaction range (< 3.1 blocks): DIVE INTO BED!
     if (dist <= 3.1) {
-      clearInterval(sprintInterval);
+      if (bedSprintInterval) {
+        clearInterval(bedSprintInterval);
+        bedSprintInterval = null;
+      }
       bot.clearControlStates();
       try {
         console.log('[Bed Rush] Reached bed! Hopping in now...');
@@ -1949,7 +2011,7 @@ async function sprintToBedAndSleep() {
     const dz = bedCenter.z - bot.entity.position.z;
     const yaw = Math.atan2(-dx, -dz);
 
-    bot.look(yaw, 0, true);
+    try { bot.look(yaw, 0, true); } catch (_) {}
     bot.setControlState('forward', true);
     bot.setControlState('sprint', true);
 
@@ -1962,7 +2024,10 @@ async function sprintToBedAndSleep() {
     }
 
     if (ticks > maxSprintTicks) {
-      clearInterval(sprintInterval);
+      if (bedSprintInterval) {
+        clearInterval(bedSprintInterval);
+        bedSprintInterval = null;
+      }
       bot.clearControlStates();
       isSprintingToBed = false;
       try { await bot.sleep(bed); } catch (_) {}
@@ -1995,12 +2060,15 @@ function startMovementLoop() {
     try {
       // 1. Check health and eat if needed
       await autoEatFood();
+      if (!bot || !bot.entity || bot.isSleeping) return;
 
       // 2. Check and equip any gear
       await autoEquipArmor();
+      if (!bot || !bot.entity || bot.isSleeping) return;
 
       // 3. Check player proximity
       checkPlayerProximity();
+      if (!bot || !bot.entity || bot.isSleeping) return;
 
       // 4. Update base anchor if near bed and anchor not set
       const bed = findNearbyBed();
@@ -2019,7 +2087,7 @@ function startMovementLoop() {
         const dx = baseAnchor.x - bot.entity.position.x;
         const dz = baseAnchor.z - bot.entity.position.z;
         const yawTowardsBase = Math.atan2(-dx, -dz);
-        bot.look(yawTowardsBase, 0, true);
+        try { bot.look(yawTowardsBase, 0, true); } catch (_) {}
         await smartStepForward(700);
         return;
       }
@@ -2032,32 +2100,37 @@ function startMovementLoop() {
 
       // Check player body language (crouch & jump mirroring)
       checkPlayerBodyLanguage();
+      if (!bot || !bot.entity || bot.isSleeping) return;
 
       // 3. REALISTIC LIVING HUMAN WALKING STYLES & PATROL
       const styleRoll = Math.random();
 
       if (styleRoll < 0.30) {
         // STYLE 1: Casual Stroll with Natural Head Sway
+        if (!bot || !bot.entity) return;
         const angleOffset = (Math.random() - 0.5) * Math.PI * 0.7;
         await smoothLook(bot.entity.yaw + angleOffset, (Math.random() - 0.5) * 0.15, 3);
         await smartStepForward(750, false);
       } else if (styleRoll < 0.50) {
         // STYLE 2: Curious Inspector (Inspects ground/flowers, pitches head down 30°, crouches)
+        if (!bot || !bot.entity) return;
         const groundAngle = (Math.random() - 0.5) * Math.PI * 0.5;
         await smoothLook(bot.entity.yaw + groundAngle, 0.45, 3); // look down at ground
         await smartStepForward(500, false);
-        bot.setControlState('sneak', true);
+        if (bot) bot.setControlState('sneak', true);
         await sleep(400);
         if (bot) bot.setControlState('sneak', false);
       } else if (styleRoll < 0.65) {
         // STYLE 3: Playful Jog & Bunny-Hop (Quick human sprint burst with hop)
+        if (!bot || !bot.entity) return;
         const forwardAngle = (Math.random() - 0.5) * Math.PI * 0.3;
         await smoothLook(bot.entity.yaw + forwardAngle, -0.1, 2);
-        bot.setControlState('jump', true);
+        if (bot) bot.setControlState('jump', true);
         await smartStepForward(600, true); // sprint forward with jump
         if (bot) bot.setControlState('jump', false);
       } else if (styleRoll < 0.82) {
         // STYLE 4: Base Lookout (Slowly scans the horizon and sky like a guard)
+        if (!bot || !bot.entity) return;
         const targetYaw = bot.entity.yaw + (Math.random() > 0.5 ? 1.0 : -1.0) * (Math.PI * 0.6);
         const skyPitch = (Math.random() - 0.5) * 0.35;
         await smoothLook(targetYaw, skyPitch, 5);
@@ -2088,6 +2161,11 @@ function stopMovementLoop() {
     clearInterval(combatInterval);
     combatInterval = null;
   }
+  if (bedSprintInterval) {
+    clearInterval(bedSprintInterval);
+    bedSprintInterval = null;
+  }
+  isSprintingToBed = false;
   isFightingMobs = false;
   isReturningToBase = false;
   currentCombatTarget = null;

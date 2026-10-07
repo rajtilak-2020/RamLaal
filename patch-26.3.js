@@ -32,6 +32,28 @@ try {
           }
         }
       }
+
+      // A2. Flatten packet_block_place to flat properties expected by mineflayer
+      if (toServer['packet_block_place']) {
+        const pbpStr = JSON.stringify(toServer['packet_block_place']);
+        if (pbpStr.includes('BlockHitResult')) {
+          toServer['packet_block_place'] = [
+            'container',
+            [
+              { name: 'hand', type: 'varint' },
+              { name: 'location', type: 'position' },
+              { name: 'direction', type: 'varint' },
+              { name: 'cursorX', type: 'f32' },
+              { name: 'cursorY', type: 'f32' },
+              { name: 'cursorZ', type: 'f32' },
+              { name: 'insideBlock', type: 'bool' },
+              { name: 'worldBorderHit', type: 'bool' },
+              { name: 'sequence', type: 'varint' }
+            ]
+          ];
+          modified = true;
+        }
+      }
     }
 
     // B. Fix packet_advancements displayData coords if outdated
@@ -299,6 +321,20 @@ function sizeOfEntityDelta (value) {
       );
       fs.writeFileSync(compilerPath, compilerContent, 'utf8');
       log('Patched minecraft-protocol datatypes/compiler-minecraft.js with entityDelta');
+    }
+  }
+
+  // 7. Patch minecraft-protocol serializer.js to suppress 0x85 (advancements) parse failures
+  const serializerPath = path.join(__dirname, 'node_modules/minecraft-protocol/src/transforms/serializer.js');
+  if (fs.existsSync(serializerPath)) {
+    let serContent = fs.readFileSync(serializerPath, 'utf8');
+    if (!serContent.includes('packetId === 0x85')) {
+      serContent = serContent.replace(
+        "if (e.partialReadError) {",
+        "if (e.partialReadError || packetId === 0x85) {"
+      );
+      fs.writeFileSync(serializerPath, serContent, 'utf8');
+      log('Patched minecraft-protocol serializer.js to safely ignore 0x85 advancements parse errors');
     }
   }
 } catch (err) {
