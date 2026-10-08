@@ -800,16 +800,12 @@ function createBot() {
                 bot.setSettings({ viewDistance: config.viewDistance });
             }
         } catch (_) {}
-        console.log(
-            `[Chunk Simulation] Client requested view distance: ${config.viewDistance} chunks. Server view distance cap: ${bot.game.serverViewDistance || "unknown"} chunks.`,
-        );
     });
 
     // Auto-detect when RamLaal is teleported (e.g. /tp) and lock new base anchor
     bot.on("forcedMove", () => {
         if (bot && bot.entity) {
             baseAnchor = bot.entity.position.clone();
-            console.log(`[Base Guard] Teleport detected via forcedMove! Base anchor reset to: ${baseAnchor.floored()}`);
         }
     });
 
@@ -832,10 +828,9 @@ function createBot() {
     });
 
     bot.on("spawn", () => {
-        console.log("[Bot] Spawned in the world. Initializing AI perception core...");
+        console.log("[Bot] Spawned in the world.");
         if (bot && bot.entity && !baseAnchor) {
             baseAnchor = bot.entity.position.clone();
-            console.log(`[Base Guard] Base spawn anchor locked at: ${baseAnchor.floored()}`);
         }
         startMovementLoop();
     });
@@ -865,7 +860,6 @@ function createBot() {
             const name = entity.username || entity.name || String(entity.id);
             sleepingPlayers.add(name);
             lastOtherPlayerSleepTime = Date.now();
-            console.log(`[Bed Detection] Player ${name} is sleeping in bed! (Total sleeping: ${sleepingPlayers.size})`);
             checkSleepTrigger();
         }
     });
@@ -875,7 +869,6 @@ function createBot() {
         if (entity.type === "player" || (entity.username && entity.username !== bot.username)) {
             const name = entity.username || entity.name || String(entity.id);
             sleepingPlayers.delete(name);
-            console.log(`[Bed Detection] Player ${name} woke up / left bed.`);
         }
     });
 
@@ -897,7 +890,6 @@ function createBot() {
         const text = msg.toString().toLowerCase();
         if (text.includes("sleeping") || text.includes("players sleeping") || text.includes("so raha")) {
             lastOtherPlayerSleepTime = Date.now();
-            console.log(`[Bed Detection] Action bar sleep announcement detected: "${text}"`);
             checkSleepTrigger();
         }
     });
@@ -912,14 +904,12 @@ function createBot() {
             text.includes("bistar me")
         ) {
             lastOtherPlayerSleepTime = Date.now();
-            console.log(`[Bed Detection] Chat sleep announcement detected: "${text}"`);
             checkSleepTrigger();
         }
     });
 
     // Morning Wake Handler: Resumes movement and deposits all items to morning chest (excluding sword & armor)
     bot.on("wake", async () => {
-        console.log("[Bed] RamLaal woke up! Resuming movement and clearing inventory to chest...");
         sleepingPlayers.clear();
         lastOtherPlayerSleepTime = 0;
         hasClearedChestToday = true;
@@ -1571,18 +1561,14 @@ async function goToSleep(silent = false) {
 
     const bed = findNearbyBed();
     if (!bed) {
-        console.log("[Bed] No bed found within 4 blocks.");
         return;
     }
 
     try {
         isTryingToSleep = true;
         stopMovementLoop();
-        console.log("[Bed] Attempting to sleep in bed...");
         await bot.sleep(bed);
-        console.log("[Bed] RamLaal is now sleeping in bed!");
     } catch (err) {
-        console.warn(`[Bed Error] ${err.message}`);
         if (!bot.isSleeping) {
             startMovementLoop();
         }
@@ -1633,7 +1619,6 @@ function checkSleepTrigger() {
 
     // If night or thunder AND another player is sleeping, sprint to bed immediately
     if ((isNight || isThunder) && isAnyOtherPlayerSleeping()) {
-        console.log("[Bed Trigger] At least one player is sleeping in bed! RamLaal is sprinting to bed...");
         sprintToBedAndSleep();
     }
 }
@@ -1678,11 +1663,8 @@ async function clearInventoryToChest(silent = false) {
         }
 
         if (!chestBlock) {
-            console.log("[Chest Deposit] No chest or barrel found nearby to store items.");
             return;
         }
-
-        console.log(`[Chest Deposit] Found chest at ${chestBlock.position}. Approaching and depositing loot...`);
 
         // Walk towards chest if not close enough
         const dist = bot.entity.position.distanceTo(chestBlock.position);
@@ -1703,7 +1685,6 @@ async function clearInventoryToChest(silent = false) {
         try {
             chestWindow = await bot.openChest(chestBlock);
         } catch (openErr) {
-            console.warn(`[Chest Deposit] Could not open chest: ${openErr.message}`);
             return;
         }
 
@@ -1721,7 +1702,6 @@ async function clearInventoryToChest(silent = false) {
                 depositedCount += itemToDeposit.count;
                 await sleep(100);
             } catch (depErr) {
-                console.warn(`[Chest Deposit] Deposit error for ${itemToDeposit.name}: ${depErr.message}`);
                 break; // Chest might be full or slot error
             }
         }
@@ -1729,10 +1709,7 @@ async function clearInventoryToChest(silent = false) {
         try {
             chestWindow.close();
         } catch (_) {}
-
-        console.log(`[Chest Deposit] Morning deposit finished! Transferred ${depositedCount} items to chest.`);
     } catch (err) {
-        console.warn(`[Chest Deposit Error] ${err.message}`);
     } finally {
         isDepositingChest = false;
         startMovementLoop();
@@ -2086,7 +2063,6 @@ async function checkCombatAndMobs() {
         isFightingMobs = false;
         currentCombatTarget = null;
         bot.clearControlStates();
-        console.log("[Combat AI] All nearby hostile mobs defeated! Returning to base anchor...");
     }
 
     // 4. RETURN TO BASE ANCHOR (Spawn Location)
@@ -2104,9 +2080,6 @@ async function checkCombatAndMobs() {
                 // Safely arrived back inside base perimeter!
                 isReturningToBase = false;
                 bot.clearControlStates();
-                console.log(
-                    `[Base Guard] RamLaal returned safely home! Distance to base center: ${distFromBase.toFixed(1)} blocks.`,
-                );
             } else {
                 const dx = baseAnchor.x - currentPos.x;
                 const dz = baseAnchor.z - currentPos.z;
@@ -2275,14 +2248,11 @@ async function sprintToBedAndSleep() {
     if (!bed) {
         const now = Date.now();
         lastSleepAttempt = now;
-        console.log("[Bed] No unoccupied bed found within 18 blocks.");
         return;
     }
 
     isSprintingToBed = true;
     stopMovementLoop();
-
-    console.log(`[Bed Rush] Night arrived & player sleeping! Sprinting to unoccupied bed at ${bed.position}...`);
 
     let ticks = 0;
     const maxSprintTicks = 45; // ~4.5 seconds max
@@ -2313,11 +2283,9 @@ async function sprintToBedAndSleep() {
             }
             bot.clearControlStates();
             try {
-                console.log("[Bed Rush] Reached bed! Hopping in now...");
                 await bot.sleep(bed);
             } catch (err) {
                 lastSleepAttempt = Date.now();
-                console.warn(`[Bed Rush Error] ${err.message}`);
                 if (!bot.isSleeping) startMovementLoop();
             } finally {
                 isSprintingToBed = false;
@@ -2370,7 +2338,6 @@ function startMovementLoop() {
     // Set initial base anchor if not set
     if (!baseAnchor && bot && bot.entity) {
         baseAnchor = bot.entity.position.clone();
-        console.log(`[Base Guard] Base anchor locked at: ${baseAnchor.floored()}`);
     }
 
     // Fast Combat & Self-Defense Loop (Every 250ms for aggressive pursuit & combo crits)
@@ -2492,9 +2459,7 @@ function startMovementLoop() {
                     await sleep(500);
                 }
             }
-        } catch (err) {
-            console.error("[Base Guard Error]", err);
-        }
+        } catch (_) {}
     }, 4500);
 }
 
