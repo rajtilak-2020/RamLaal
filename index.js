@@ -10,32 +10,65 @@ try {
 } catch (_) {}
 const mineflayer = require("mineflayer");
 
-function parseServerTarget() {
-  let rawHost = (process.env.MC_HOST || 'mc.krajtilak.in').trim();
-  let port = process.env.MC_PORT ? parseInt(process.env.MC_PORT, 10) : undefined;
+function parseServerEntry(entry) {
+  let host = entry.trim();
+  let port = undefined;
+  if (host.includes(":")) {
+    const parts = host.split(":");
+    host = parts[0].trim();
+    if (parts[1]) port = parseInt(parts[1].trim(), 10);
+  }
+  if (!port || isNaN(port)) {
+    port = host === "mc.krajtilak.in" ? 35529 : 25565;
+  }
+  return { host, port };
+}
 
-  if (rawHost.includes(':')) {
-    const parts = rawHost.split(':');
-    rawHost = parts[0].trim();
-    if (!port && parts[1]) {
-      port = parseInt(parts[1].trim(), 10);
+function parseServerTargets() {
+  const rawServers = process.env.MC_SERVERS;
+  let serverStrings = [];
+
+  if (rawServers && rawServers.trim().length > 0) {
+    serverStrings = rawServers.split(",").map(s => s.trim()).filter(Boolean);
+  } else if (process.env.MC_HOST && process.env.MC_HOST.includes(",")) {
+    serverStrings = process.env.MC_HOST.split(",").map(s => s.trim()).filter(Boolean);
+  } else if (
+    process.env.MC_HOST &&
+    process.env.MC_HOST.trim() !== "mc.krajtilak.in" &&
+    process.env.MC_HOST.trim() !== "jhaatgao.falixsrv.me"
+  ) {
+    const host = process.env.MC_HOST.trim();
+    const port = process.env.MC_PORT ? parseInt(process.env.MC_PORT, 10) : undefined;
+    serverStrings = [`${host}${port ? `:${port}` : ""}`];
+  } else {
+    // Default: Join BOTH servers simultaneously!
+    serverStrings = ["mc.krajtilak.in:35529", "jhaatgao.falixsrv.me:25565"];
+  }
+
+  const targets = [];
+  const seen = new Set();
+  for (const str of serverStrings) {
+    const parsed = parseServerEntry(str);
+    const key = `${parsed.host}:${parsed.port}`;
+    if (!seen.has(key)) {
+      seen.add(key);
+      targets.push(parsed);
     }
   }
 
-  // Default port: 35529 for mc.krajtilak.in, or 25565 for standard SRV resolution
-  if (!port || isNaN(port)) {
-    port = rawHost === 'mc.krajtilak.in' ? 35529 : 25565;
-  }
-
-  return { host: rawHost, port };
+  return targets.length > 0
+    ? targets
+    : [
+        { host: "mc.krajtilak.in", port: 35529 },
+        { host: "jhaatgao.falixsrv.me", port: 25565 },
+      ];
 }
 
-const serverTarget = parseServerTarget();
+const serverTargets = parseServerTargets();
 
 // Configuration from environment variables
 const config = {
-  host: serverTarget.host,
-  port: serverTarget.port,
+  servers: serverTargets,
   username: process.env.MC_USERNAME || 'RamLaal',
   version: process.env.MC_VERSION || '26.3', // 26.3 for latest server update
   auth: process.env.MC_AUTH || 'offline', // 'offline' for cracked Aternos/Falix servers
@@ -129,6 +162,10 @@ const fortunes = [
 function getRandom(arr) {
     if (!arr || arr.length === 0) return "";
     return arr[Math.floor(Math.random() * arr.length)];
+}
+
+function sleep(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
 }
 
 // Inlined custom message banks directly in index.js (Zero file I/O overhead on server)
@@ -549,6 +586,8 @@ const baseDeathObserverRoasts = [
 ];
 const allDeathObserverRoasts = [...baseDeathObserverRoasts, ...customDeathMessages];
 
+let sessions = [];
+
 // Simple HTTP server for Bot-Hosting / Pterodactyl / edge proxies
 const server = http.createServer((req, res) => {
     if (req.url === "/health" || req.headers["accept"]?.includes("application/json")) {
@@ -557,15 +596,40 @@ const server = http.createServer((req, res) => {
             JSON.stringify({
                 status: "online",
                 bot: config.username,
-                server: `${config.host}:${config.port}`,
+                mode: sessions.length > 1 ? "dual-server" : "single-server",
+                servers: sessions.map(s => s.getStatus()),
                 mcVersion: config.version,
-                health: bot?.health ?? 20,
-                position: bot?.entity?.position ? bot.entity.position.floored() : null,
                 uptime: Math.floor(process.uptime()),
                 viewDistance: config.viewDistance,
             }),
         );
     }
+
+    const anyOnline = sessions.some(s => s.getStatus().online);
+    const serverCardsHtml = sessions
+        .map(s => {
+            const st = s.getStatus();
+            const badgeBg = st.online ? "#064e3b" : "#78350f";
+            const badgeColor = st.online ? "#34d399" : "#f59e0b";
+            const dotBg = st.online ? "#10b981" : "#f59e0b";
+            const badgeText = st.online ? "ONLINE & ACTIVE" : "CONNECTING / RECONNECTING";
+            const posText = st.position ? `(${st.position.x}, ${st.position.y}, ${st.position.z})` : "Waiting for spawn...";
+            return `
+      <div style="background: #0f172a; padding: 14px; border-radius: 10px; border: 1px solid #334155; margin-bottom: 12px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+          <span style="font-weight: 700; color: #38bdf8; font-size: 14px;">🌐 ${st.target}</span>
+          <span style="display: inline-flex; align-items: center; gap: 6px; background: ${badgeBg}; color: ${badgeColor}; padding: 3px 10px; border-radius: 9999px; font-weight: 600; font-size: 11px;">
+            <span style="width: 6px; height: 6px; border-radius: 50%; background: ${dotBg};"></span>
+            ${badgeText}
+          </span>
+        </div>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: 12px;">
+          <div><span style="color: #64748b; font-weight: 600;">HEALTH: </span><span style="color: #f1f5f9; font-weight: 600;">${st.online ? `❤️ ${st.health}/20` : "--"}</span></div>
+          <div><span style="color: #64748b; font-weight: 600;">POSITION: </span><span style="color: #f1f5f9; font-weight: 600;">${posText}</span></div>
+        </div>
+      </div>`;
+        })
+        .join("");
 
     res.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
     res.end(`<!DOCTYPE html>
@@ -573,21 +637,21 @@ const server = http.createServer((req, res) => {
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>${config.username} - Minecraft Bot</title>
+  <title>${config.username} - Dual Server AFK Bot</title>
   <style>
     body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #0f172a; color: #f8fafc; display: flex; align-items: center; justify-content: center; min-height: 100vh; margin: 0; padding: 20px; box-sizing: border-box; }
-    .card { background: #1e293b; border: 1px solid #334155; border-radius: 16px; padding: 32px; max-width: 500px; width: 100%; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.5); }
-    .header { display: flex; align-items: center; gap: 16px; margin-bottom: 20px; }
+    .card { background: #1e293b; border: 1px solid #334155; border-radius: 16px; padding: 28px; max-width: 520px; width: 100%; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.5); }
+    .header { display: flex; align-items: center; gap: 16px; margin-bottom: 16px; }
     .avatar { width: 52px; height: 52px; border-radius: 12px; background: #3b82f6; display: flex; align-items: center; justify-content: center; font-size: 26px; }
     .title { margin: 0; font-size: 22px; font-weight: 700; color: #fff; }
     .subtitle { margin: 4px 0 0; color: #94a3b8; font-size: 13px; }
-    .status-badge { display: inline-flex; align-items: center; gap: 8px; background: #064e3b; color: #34d399; padding: 6px 14px; border-radius: 9999px; font-weight: 600; font-size: 13px; margin-bottom: 20px; }
-    .status-dot { width: 8px; height: 8px; border-radius: 50%; background: #10b981; box-shadow: 0 0 10px #10b981; }
-    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 20px; }
-    .stat { background: #0f172a; padding: 12px; border-radius: 8px; border: 1px solid #334155; }
+    .status-badge { display: inline-flex; align-items: center; gap: 8px; background: ${anyOnline ? "#064e3b" : "#78350f"}; color: ${anyOnline ? "#34d399" : "#f59e0b"}; padding: 6px 14px; border-radius: 9999px; font-weight: 600; font-size: 13px; margin-bottom: 18px; }
+    .status-dot { width: 8px; height: 8px; border-radius: 50%; background: ${anyOnline ? "#10b981" : "#f59e0b"}; box-shadow: 0 0 10px ${anyOnline ? "#10b981" : "#f59e0b"}; }
+    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 16px; }
+    .stat { background: #0f172a; padding: 10px; border-radius: 8px; border: 1px solid #334155; }
     .stat-label { font-size: 11px; color: #64748b; text-transform: uppercase; font-weight: 600; }
-    .stat-val { font-size: 15px; font-weight: 600; color: #f1f5f9; margin-top: 4px; }
-    .footer { text-align: center; color: #64748b; font-size: 12px; border-top: 1px solid #334155; padding-top: 16px; }
+    .stat-val { font-size: 14px; font-weight: 600; color: #f1f5f9; margin-top: 2px; }
+    .footer { text-align: center; color: #64748b; font-size: 12px; border-top: 1px solid #334155; padding-top: 14px; }
   </style>
 </head>
 <body>
@@ -596,18 +660,17 @@ const server = http.createServer((req, res) => {
       <div class="avatar">🤖</div>
       <div>
         <h1 class="title">${config.username}</h1>
-        <p class="subtitle">Minecraft ${config.version} AFK Bot</p>
+        <p class="subtitle">Minecraft ${config.version} • Dual-Server AFK Bot</p>
       </div>
     </div>
     <div class="status-badge">
       <span class="status-dot"></span>
-      <span>${bot && bot.entity ? "ONLINE & ACTIVE" : "RUNNING / CONNECTING"}</span>
+      <span>${anyOnline ? "ONLINE ON SERVER(S)" : "RUNNING / CONNECTING"}</span>
+    </div>
+    <div style="margin-bottom: 16px;">
+      ${serverCardsHtml}
     </div>
     <div class="grid">
-      <div class="stat">
-        <div class="stat-label">Target Server</div>
-        <div class="stat-val">${config.host}:${config.port}</div>
-      </div>
       <div class="stat">
         <div class="stat-label">Simulation</div>
         <div class="stat-val">${config.viewDistance} Chunks</div>
@@ -616,13 +679,9 @@ const server = http.createServer((req, res) => {
         <div class="stat-label">Uptime</div>
         <div class="stat-val">${Math.floor(process.uptime())}s</div>
       </div>
-      <div class="stat">
-        <div class="stat-label">Port</div>
-        <div class="stat-val">${config.httpPort}</div>
-      </div>
     </div>
     <div class="footer">
-      Powered by RamLaal Core • mc-bot.krajtilak.in
+      Powered by RamLaal Core • Dual Server Mode
     </div>
   </div>
 </body>
@@ -633,59 +692,64 @@ server.listen(config.httpPort, "0.0.0.0", () => {
     console.log(`[Web Server] Listening on 0.0.0.0:${config.httpPort}`);
 });
 
-let bot = null;
-let movementInterval = null;
-let combatInterval = null;
-let reconnectTimeout = null;
-let randomChatTimeout = null;
-let isTryingToSleep = false;
-let isSprintingToBed = false;
-let isEating = false;
-let lastSleepAttempt = 0;
-let lastHurtTime = 0;
-let lastProximityCheck = 0;
-let lastBattleCry = 0;
-let lastCreeperWarn = 0;
-let lastArmorEquipChat = 0;
-let lastEatChat = 0;
-let lastDeathRoast = 0;
-let proximityCooldowns = {};
-let isMuted = true; // Permanently muted per user request
+function createBotSession(target, startDelayMs = 0) {
+    let bot = null;
+    let movementInterval = null;
+    let combatInterval = null;
+    let reconnectTimeout = null;
+    let randomChatTimeout = null;
+    let isTryingToSleep = false;
+    let isSprintingToBed = false;
+    let isEating = false;
+    let lastSleepAttempt = 0;
+    let lastHurtTime = 0;
+    let lastProximityCheck = 0;
+    let lastBattleCry = 0;
+    let lastCreeperWarn = 0;
+    let lastArmorEquipChat = 0;
+    let lastEatChat = 0;
+    let lastDeathRoast = 0;
+    let proximityCooldowns = {};
+    let isMuted = true; // Permanently muted per user request
 
-// Base Anchor & Aggressive Combat Guard Range
-let baseAnchor = null;
-const BASE_PATROL_RADIUS = 7; // Normal patrol radius in blocks from base center
-const COMBAT_DETECTION_RADIUS = 16; // Aggressively spots and charges hostiles up to 16 blocks away
-const MAX_CHASE_DISTANCE = 32; // Can chase and exterminate mobs up to 32 blocks away from base anchor
-let isFightingMobs = false;
-let isReturningToBase = false;
-let currentCombatTarget = null;
+    // Base Anchor & Aggressive Combat Guard Range
+    let baseAnchor = null;
+    const BASE_PATROL_RADIUS = 7; // Normal patrol radius in blocks from base center
+    const COMBAT_DETECTION_RADIUS = 16; // Aggressively spots and charges hostiles up to 16 blocks away
+    const MAX_CHASE_DISTANCE = 32; // Can chase and exterminate mobs up to 32 blocks away from base anchor
+    let isFightingMobs = false;
+    let isReturningToBase = false;
+    let currentCombatTarget = null;
 
-// Sleeping Player Tracking & Morning Chest Deposit
-const sleepingPlayers = new Set();
-let lastOtherPlayerSleepTime = 0;
-let hasClearedChestToday = false;
-let isDepositingChest = false;
-let bedSprintInterval = null;
+    // Sleeping Player Tracking & Morning Chest Deposit
+    const sleepingPlayers = new Set();
+    let lastOtherPlayerSleepTime = 0;
+    let hasClearedChestToday = false;
+    let isDepositingChest = false;
+    let bedSprintInterval = null;
+    let isDestroyed = false;
 
-// Central Safe Chat Handler - Completely muted per user request
-function safeChat(message, force = false) {
-    // All in-game chat messages are permanently muted
-    return;
-}
+    const serverTag = `${target.host}:${target.port}`;
 
-function createBot() {
-    cleanupTimers();
+    // Central Safe Chat Handler - Completely muted per user request
+    function safeChat(message, force = false) {
+        // All in-game chat messages are permanently muted
+        return;
+    }
 
-    console.log(`[Bot] Connecting to ${config.host}:${config.port} as ${config.username}...`);
+    function createBot() {
+        if (isDestroyed) return;
+        cleanupTimers();
 
-    const botOptions = {
-        host: config.host,
-        port: config.port,
-        username: config.username,
-        auth: config.auth,
-        viewDistance: config.viewDistance,
-        clientSettings: {
+        console.log(`[Bot] Connecting to ${serverTag} as ${config.username}...`);
+
+        const botOptions = {
+            host: target.host,
+            port: target.port,
+            username: config.username,
+            auth: config.auth,
+            viewDistance: config.viewDistance,
+            clientSettings: {
             viewDistance: config.viewDistance,
             locale: "en_us",
             skinParts: 127,
@@ -787,7 +851,7 @@ function createBot() {
     bot.once("spawn", hookLook);
 
     bot.once("login", () => {
-        console.log(`[Bot] Logged into ${config.host}:${config.port} successfully!`);
+        console.log(`[Bot] Logged into ${serverTag} successfully!`);
         // Completely mute bot.chat permanently
         if (typeof bot.chat === "function" && !bot._originalChat) {
             bot._originalChat = bot.chat.bind(bot);
@@ -828,7 +892,7 @@ function createBot() {
     });
 
     bot.on("spawn", () => {
-        console.log("[Bot] Spawned in the world.");
+        console.log(`[Bot] Spawned in the world (${serverTag}).`);
         if (bot && bot.entity && !baseAnchor) {
             baseAnchor = bot.entity.position.clone();
         }
@@ -946,7 +1010,7 @@ function createBot() {
     });
 
     bot.on("death", () => {
-        console.log("[Bot] Bot died. Respawning...");
+        console.log(`[Bot] Bot died on ${serverTag}. Respawning...`);
         stopMovementLoop();
         setTimeout(() => {
             if (bot) bot.respawn();
@@ -954,7 +1018,7 @@ function createBot() {
     });
 
     bot.on("kicked", reason => {
-        console.warn(`[Bot] Kicked: ${JSON.stringify(reason)}`);
+        console.warn(`[Bot] Kicked from ${serverTag}: ${JSON.stringify(reason)}`);
         cleanupTimers();
     });
 
@@ -969,11 +1033,11 @@ function createBot() {
             msg.includes("Read error for")
         )
             return;
-        console.error(`[Bot Error] ${msg}`);
+        console.error(`[Bot Error] [${serverTag}] ${msg}`);
     });
 
     bot.on("end", () => {
-        console.log(`[Bot] Disconnected from server. Reconnecting in ${config.reconnectDelay / 1000}s...`);
+        console.log(`[Bot] Disconnected from ${serverTag}. Reconnecting in ${config.reconnectDelay / 1000}s...`);
         cleanupTimers();
         scheduleReconnect();
     });
@@ -2509,29 +2573,61 @@ function cleanupTimers() {
 
 function scheduleReconnect() {
     cleanupTimers();
+    if (isDestroyed) return;
     reconnectTimeout = setTimeout(() => {
         createBot();
     }, config.reconnectDelay);
 }
 
-function sleep(ms) {
-    return new Promise(resolve => setTimeout(resolve, ms));
+    function destroy() {
+        isDestroyed = true;
+        cleanupTimers();
+        if (bot && typeof bot.quit === "function") {
+            try {
+                bot.quit();
+            } catch (_) {}
+        }
+    }
+
+    function getStatus() {
+        return {
+            target: serverTag,
+            online: !!(bot && bot.entity),
+            health: bot?.health ?? 20,
+            position: bot?.entity?.position ? bot.entity.position.floored() : null,
+            username: config.username,
+        };
+    }
+
+    if (startDelayMs > 0) {
+        setTimeout(() => {
+            if (!isDestroyed) createBot();
+        }, startDelayMs);
+    } else {
+        createBot();
+    }
+
+    return {
+        target,
+        serverTag,
+        getStatus,
+        destroy,
+        getBot: () => bot,
+    };
 }
+
+// Start dual bot sessions (staggered by 500ms for smooth sequential startup)
+sessions = config.servers.map((target, idx) => createBotSession(target, idx * 500));
 
 // Graceful shutdown handling
 process.on("SIGINT", () => {
     console.log("\n[System] Gracefully shutting down...");
-    cleanupTimers();
-    if (bot && typeof bot.quit === "function") bot.quit();
+    for (const s of sessions) s.destroy();
     process.exit(0);
 });
 
 process.on("SIGTERM", () => {
     console.log("\n[System] Termination signal received...");
-    cleanupTimers();
-    if (bot && typeof bot.quit === "function") bot.quit();
+    for (const s of sessions) s.destroy();
     process.exit(0);
 });
-
-// Start the bot
-createBot();
