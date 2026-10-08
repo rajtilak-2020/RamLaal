@@ -624,6 +624,15 @@ function createBot() {
           params = { ...rest, ...hitResult };
         }
       }
+      // Safety clamp on all movement / rotation packets to prevent invalid_player_movement kicks
+      if (params) {
+        if (typeof params.pitch === 'number') {
+          params.pitch = Math.max(-89.5, Math.min(89.5, Number.isFinite(params.pitch) ? params.pitch : 0));
+        }
+        if (typeof params.xRot === 'number') {
+          params.xRot = Math.max(-89.5, Math.min(89.5, Number.isFinite(params.xRot) ? params.xRot : 0));
+        }
+      }
       return origClientWrite(name, params);
     };
 
@@ -632,13 +641,29 @@ function createBot() {
       const msg = err.message || '';
       if (
         msg.includes('0x85') ||
+        msg.includes('0x30') ||
         msg.includes('packet_advancements') ||
         msg.includes('advancements') ||
+        msg.includes('world_particles') ||
         msg.includes('array size is abnormally large') ||
         msg.includes('Read error for')
       ) return;
     });
   }
+
+  // Wrap bot.look to clamp pitch in radians (strictly [-1.50, 1.50] rad = [-85.9°, 85.9°])
+  // This guarantees no code path ever triggers vanilla invalid_player_movement kicks (|pitch| > 90°)
+  const hookLook = () => {
+    if (bot && typeof bot.look === 'function' && !bot._originalLook) {
+      bot._originalLook = bot.look.bind(bot);
+      bot.look = async function (yaw, pitch, force) {
+        const safePitch = Math.max(-1.50, Math.min(1.50, Number.isFinite(pitch) ? pitch : 0));
+        return bot._originalLook(yaw, safePitch, force);
+      };
+    }
+  };
+  hookLook();
+  bot.once('spawn', hookLook);
 
   bot.once('login', () => {
     console.log(`[Bot] Logged into ${config.host}:${config.port} successfully!`);
@@ -912,13 +937,13 @@ async function waveArm() {
 // Human-like animation: Nodding head yes
 async function nodHead() {
   if (!bot || !bot.entity || bot.isSleeping) return;
-  const originalPitch = bot.entity.pitch;
+  const originalPitch = Math.max(-1.0, Math.min(1.0, Number.isFinite(bot.entity.pitch) ? bot.entity.pitch : 0));
   try {
     if (!bot || !bot.entity) return;
-    bot.look(bot.entity.yaw, originalPitch + 0.4, true);
+    bot.look(bot.entity.yaw, originalPitch + 0.35, true);
     await sleep(150);
     if (!bot || !bot.entity) return;
-    bot.look(bot.entity.yaw, originalPitch - 0.4, true);
+    bot.look(bot.entity.yaw, originalPitch - 0.35, true);
     await sleep(150);
     if (!bot || !bot.entity) return;
     bot.look(bot.entity.yaw, originalPitch, true);
@@ -1741,19 +1766,24 @@ async function checkCombatAndMobs() {
 
     await equipBestWeapon();
 
-    // Aim precisely at the mob's upper body
+    // Aim precisely at the mob's upper body (clamped pitch to prevent server kicks)
     const targetPos = nearestHostile.position.offset(0, nearestHostile.height * 0.75, 0);
     const dx = targetPos.x - currentPos.x;
     const dz = targetPos.z - currentPos.z;
     const yaw = Math.atan2(-dx, -dz);
-    const pitch = Math.atan2(targetPos.y - (currentPos.y + 1.6), Math.sqrt(dx * dx + dz * dz));
+    const rawPitch = Math.atan2(targetPos.y - (currentPos.y + 1.6), Math.sqrt(dx * dx + dz * dz));
+    const pitch = Math.max(-1.50, Math.min(1.50, -rawPitch));
 
-    bot.look(yaw, -pitch, true);
+    bot.look(yaw, pitch, true);
 
     // If within strike reach (<= 3.8 blocks): CRITICAL JUMP ATTACK & RAPID COMBOS!
     if (nearestDist <= 3.8) {
       // In Minecraft, jumping and attacking deals a Critical Hit (150% damage + crit particles)!
-      bot.setControlState('jump', true);
+      // In Creative mode, jump must be tapped as a pulse rather than held, to prevent floating/flying
+      if (bot.entity.onGround) {
+        bot.setControlState('jump', true);
+        setTimeout(() => { if (bot && bot.entity) bot.setControlState('jump', false); }, 150);
+      }
       bot.attack(nearestHostile);
       bot.swingArm('right');
 
@@ -1765,10 +1795,11 @@ async function checkCombatAndMobs() {
       bot.setControlState('forward', true);
       bot.setControlState('sprint', true);
 
-      // Auto-jump over 1-block steps during the chase
+      // Auto-jump over 1-block steps during the chase (momentary pulse)
       const obs = checkObstacleAhead();
       if (obs.isStep) {
         bot.setControlState('jump', true);
+        setTimeout(() => { if (bot && bot.entity) bot.setControlState('jump', false); }, 200);
       } else {
         bot.setControlState('jump', false);
       }
@@ -1789,34 +1820,41 @@ async function checkCombatAndMobs() {
   if (baseAnchor) {
     const distFromBase = currentPos.distanceTo(baseAnchor);
 
-    // If RamLaal drifted or chased mobs past the base patrol limit (> BASE_PATROL_RADIUS)
-    if (distFromBase > BASE_PATROL_RADIUS) {
+    // Hysteresis: start returning when outside BASE_PATROL_RADIUS + 2.0 (9 blocks)
+    // Keep returning until safely inside BASE_PATROL_RADIUS - 1.5 (5.5 blocks)
+    if (!isReturningToBase && distFromBase > (BASE_PATROL_RADIUS + 2.0)) {
       isReturningToBase = true;
+    }
 
-      const dx = baseAnchor.x - currentPos.x;
-      const dz = baseAnchor.z - currentPos.z;
-      const yawTowardsBase = Math.atan2(-dx, -dz);
-
-      bot.look(yawTowardsBase, 0, true);
-      bot.setControlState('forward', true);
-      bot.setControlState('sprint', true);
-
-      // Auto-jump over obstacles while heading back home
-      const obs = checkObstacleAhead();
-      if (obs.isStep) {
-        bot.setControlState('jump', true);
-      } else if (obs.isWall) {
-        // Slight detour if hit a wall directly
-        bot.look(yawTowardsBase + (Math.random() > 0.5 ? 0.7 : -0.7), 0, true);
-        bot.setControlState('jump', true);
+    if (isReturningToBase) {
+      if (distFromBase <= (BASE_PATROL_RADIUS - 1.5)) {
+        // Safely arrived back inside base perimeter!
+        isReturningToBase = false;
+        bot.clearControlStates();
+        console.log(`[Base Guard] RamLaal returned safely home! Distance to base center: ${distFromBase.toFixed(1)} blocks.`);
       } else {
-        bot.setControlState('jump', false);
+        const dx = baseAnchor.x - currentPos.x;
+        const dz = baseAnchor.z - currentPos.z;
+        const yawTowardsBase = Math.atan2(-dx, -dz);
+
+        bot.look(yawTowardsBase, 0, true);
+        bot.setControlState('forward', true);
+        bot.setControlState('sprint', true);
+
+        // Auto-jump over obstacles while heading back home (momentary pulse)
+        const obs = checkObstacleAhead();
+        if (obs.isStep) {
+          bot.setControlState('jump', true);
+          setTimeout(() => { if (bot && bot.entity) bot.setControlState('jump', false); }, 200);
+        } else if (obs.isWall) {
+          // Slight detour if hit a wall directly
+          bot.look(yawTowardsBase + (Math.random() > 0.5 ? 0.7 : -0.7), 0, true);
+          bot.setControlState('jump', true);
+          setTimeout(() => { if (bot && bot.entity) bot.setControlState('jump', false); }, 200);
+        } else {
+          bot.setControlState('jump', false);
+        }
       }
-    } else if (isReturningToBase) {
-      // Safely arrived back inside base perimeter!
-      isReturningToBase = false;
-      bot.clearControlStates();
-      console.log(`[Base Guard] RamLaal returned safely home! Distance to base center: ${distFromBase.toFixed(1)} blocks.`);
     }
   }
 }
@@ -1846,8 +1884,9 @@ async function humanChat(message, lookAtTarget = null, force = false) {
 // Organic Human Mouse Movement: Smooth S-curve easing with natural micro-jitters
 async function smoothLook(targetYaw, targetPitch, steps = 4) {
   if (!bot || !bot.entity || bot.isSleeping) return;
+  targetPitch = Math.max(-1.50, Math.min(1.50, Number.isFinite(targetPitch) ? targetPitch : 0));
   const currentYaw = bot.entity.yaw;
-  const currentPitch = bot.entity.pitch;
+  const currentPitch = Math.max(-1.50, Math.min(1.50, Number.isFinite(bot.entity.pitch) ? bot.entity.pitch : 0));
   const yawDiff = targetYaw - currentYaw;
   const pitchDiff = targetPitch - currentPitch;
 
@@ -1861,7 +1900,7 @@ async function smoothLook(targetYaw, targetPitch, steps = 4) {
     const jitterPitch = (Math.random() - 0.5) * 0.012;
 
     const y = currentYaw + (yawDiff * ease) + jitterYaw;
-    const p = currentPitch + (pitchDiff * ease) + jitterPitch;
+    const p = Math.max(-1.50, Math.min(1.50, currentPitch + (pitchDiff * ease) + jitterPitch));
     try {
       if (bot && bot.entity && typeof bot.look === 'function') {
         bot.look(y, p, true);
@@ -2015,10 +2054,11 @@ async function sprintToBedAndSleep() {
     bot.setControlState('forward', true);
     bot.setControlState('sprint', true);
 
-    // Auto-jump over 1-block steps on way to bed
+    // Auto-jump over 1-block steps on way to bed (momentary pulse)
     const obs = checkObstacleAhead();
     if (obs.isStep) {
       bot.setControlState('jump', true);
+      setTimeout(() => { if (bot && bot.entity) bot.setControlState('jump', false); }, 200);
     } else {
       bot.setControlState('jump', false);
     }
@@ -2082,8 +2122,8 @@ function startMovementLoop() {
 
       const distFromBase = bot.entity.position.distanceTo(baseAnchor);
 
-      // If drifted past patrol radius (5-7 blocks), gently face towards base center
-      if (distFromBase > BASE_PATROL_RADIUS) {
+      // If drifted far past patrol radius, gently face towards base center
+      if (distFromBase > (BASE_PATROL_RADIUS + 2.0)) {
         const dx = baseAnchor.x - bot.entity.position.x;
         const dz = baseAnchor.z - bot.entity.position.z;
         const yawTowardsBase = Math.atan2(-dx, -dz);
@@ -2125,9 +2165,11 @@ function startMovementLoop() {
         if (!bot || !bot.entity) return;
         const forwardAngle = (Math.random() - 0.5) * Math.PI * 0.3;
         await smoothLook(bot.entity.yaw + forwardAngle, -0.1, 2);
-        if (bot) bot.setControlState('jump', true);
+        if (bot) {
+          bot.setControlState('jump', true);
+          setTimeout(() => { if (bot && bot.entity) bot.setControlState('jump', false); }, 200);
+        }
         await smartStepForward(600, true); // sprint forward with jump
-        if (bot) bot.setControlState('jump', false);
       } else if (styleRoll < 0.82) {
         // STYLE 4: Base Lookout (Slowly scans the horizon and sky like a guard)
         if (!bot || !bot.entity) return;

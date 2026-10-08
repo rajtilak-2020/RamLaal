@@ -178,17 +178,61 @@ function longToBigInt (arr) {
     }
   }
 
-  // 3. Patch mineflayer lib/plugins/physics.js for 26.3 teleport_confirm
+  // 3. Patch mineflayer lib/plugins/physics.js for 26.3 teleport_confirm and pitch clamping
   const physicsJsPath = path.join(__dirname, 'node_modules/mineflayer/lib/plugins/physics.js');
   if (fs.existsSync(physicsJsPath)) {
     let physicsContent = fs.readFileSync(physicsJsPath, 'utf8');
-    if (physicsContent.includes("bot.protocolVersion >= 777") && !physicsContent.includes("yRot: newYaw")) {
-      physicsContent = physicsContent.replace(
-        "yaw: newYaw,\n          pitch: newPitch",
-        "yRot: newYaw,\n          xRot: newPitch,\n          yaw: newYaw,\n          pitch: newPitch"
+    let physModified = false;
+
+    // A. teleport_confirm on 26.3 with yRot and xRot + clamped pitch
+    const tcTarget = /bot\._client\.write\('teleport_confirm',\s*\{[\s\S]*?\}\)/;
+    const tcReplacement = `bot._client.write('teleport_confirm', {
+          teleportId: packet.teleportId,
+          x: pos.x,
+          y: pos.y,
+          z: pos.z,
+          yRot: newYaw,
+          xRot: Math.max(-89.5, Math.min(89.5, Number.isFinite(newPitch) ? newPitch : 0)),
+          yaw: newYaw,
+          pitch: Math.max(-89.5, Math.min(89.5, Number.isFinite(newPitch) ? newPitch : 0))
+        })`;
+    if (physicsContent.includes("bot.protocolVersion >= 777") && (!physicsContent.includes("xRot: Math.max(-89.5") || physicsContent.includes("yRot: newYaw,\n          xRot: newPitch"))) {
+      physicsContent = physicsContent.replace(tcTarget, tcReplacement);
+      physModified = true;
+    }
+
+    // B. Clamp pitch in sendPacketLook and sendPacketPositionAndLook to prevent invalid_player_movement kicks
+    if (!physicsContent.includes("Math.max(-89.5, Math.min(89.5, Number.isFinite(pitch)")) {
+      physicsContent = physicsContent.replaceAll(
+        "lastSent.pitch = pitch",
+        "lastSent.pitch = Math.max(-89.5, Math.min(89.5, Number.isFinite(pitch) ? pitch : 0))"
       );
+      physModified = true;
+    }
+
+    // C. Clamp pitch calculation in chooseMovePacket
+    if (physicsContent.includes("const pitch = Math.fround(conv.toNotchianPitch(lastSentPitch))") &&
+        !physicsContent.includes("Math.max(-89.5, Math.min(89.5, Math.fround(conv.toNotchianPitch(lastSentPitch)))")) {
+      physicsContent = physicsContent.replace(
+        "const pitch = Math.fround(conv.toNotchianPitch(lastSentPitch))",
+        "const pitch = Math.max(-89.5, Math.min(89.5, Math.fround(conv.toNotchianPitch(lastSentPitch))))"
+      );
+      physModified = true;
+    }
+
+    // D. Clamp bot.look target pitch
+    if (physicsContent.includes("bot.look = async (yaw, pitch, force) => {") &&
+        !physicsContent.includes("pitch = Math.max(-1.50, Math.min(1.50, Number.isFinite(pitch)")) {
+      physicsContent = physicsContent.replace(
+        "bot.look = async (yaw, pitch, force) => {",
+        "bot.look = async (yaw, pitch, force) => {\n    pitch = Math.max(-1.50, Math.min(1.50, Number.isFinite(pitch) ? pitch : 0));"
+      );
+      physModified = true;
+    }
+
+    if (physModified) {
       fs.writeFileSync(physicsJsPath, physicsContent, 'utf8');
-      log('Patched mineflayer lib/plugins/physics.js teleport_confirm with yRot and xRot');
+      log('Patched mineflayer lib/plugins/physics.js with strict pitch clamping & teleport_confirm');
     }
   }
 
@@ -324,17 +368,17 @@ function sizeOfEntityDelta (value) {
     }
   }
 
-  // 7. Patch minecraft-protocol serializer.js to suppress 0x85 (advancements) parse failures
+  // 7. Patch minecraft-protocol serializer.js to suppress 0x85 and 0x30 parse failures cleanly
   const serializerPath = path.join(__dirname, 'node_modules/minecraft-protocol/src/transforms/serializer.js');
   if (fs.existsSync(serializerPath)) {
     let serContent = fs.readFileSync(serializerPath, 'utf8');
-    if (!serContent.includes('packetId === 0x85')) {
+    if (/if\s*\(\s*(?:e\.partialReadError(?:\s*\|\|\s*packetId\s*===\s*0x85)?)\s*\)\s*\{[\s\S]*?return cb\(\)\s*\}/.test(serContent)) {
       serContent = serContent.replace(
-        "if (e.partialReadError) {",
-        "if (e.partialReadError || packetId === 0x85) {"
+        /if\s*\(\s*(?:e\.partialReadError(?:\s*\|\|\s*packetId\s*===\s*0x85)?)\s*\)\s*\{[\s\S]*?return cb\(\)\s*\}/,
+        `if (e.partialReadError || packetId === 0x85 || packetId === 0x30) {\n        return cb()\n      }`
       );
       fs.writeFileSync(serializerPath, serContent, 'utf8');
-      log('Patched minecraft-protocol serializer.js to safely ignore 0x85 advancements parse errors');
+      log('Patched minecraft-protocol serializer.js to cleanly drop 0x85 & 0x30 packets without stack trace noise');
     }
   }
 } catch (err) {
