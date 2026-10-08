@@ -201,7 +201,14 @@ function longToBigInt (arr) {
       physModified = true;
     }
 
-    // B. Clamp pitch in sendPacketLook and sendPacketPositionAndLook to prevent invalid_player_movement kicks
+    // B. Clamp yaw and pitch in sendPacketLook and sendPacketPositionAndLook to prevent invalid_player_movement kicks
+    if (!physicsContent.includes("Number.isFinite(yaw) ? yaw : (Number.isFinite(lastSent.yaw)")) {
+      physicsContent = physicsContent.replaceAll(
+        "lastSent.yaw = yaw",
+        "lastSent.yaw = Number.isFinite(yaw) ? yaw : (Number.isFinite(lastSent.yaw) ? lastSent.yaw : 0)"
+      );
+      physModified = true;
+    }
     if (!physicsContent.includes("Math.max(-89.5, Math.min(89.5, Number.isFinite(pitch)")) {
       physicsContent = physicsContent.replaceAll(
         "lastSent.pitch = pitch",
@@ -210,7 +217,14 @@ function longToBigInt (arr) {
       physModified = true;
     }
 
-    // C. Clamp pitch calculation in chooseMovePacket
+    // C. Guard finite values in updatePosition and chooseMovePacket
+    if (!physicsContent.includes("if (!Number.isFinite(lastSentYaw)) lastSentYaw")) {
+      physicsContent = physicsContent.replace(
+        "const dYaw = deltaYaw(bot.entity.yaw, lastSentYaw)",
+        "if (!Number.isFinite(lastSentYaw)) lastSentYaw = Number.isFinite(bot.entity?.yaw) ? bot.entity.yaw : 0;\n    if (!Number.isFinite(lastSentPitch)) lastSentPitch = Number.isFinite(bot.entity?.pitch) ? bot.entity.pitch : 0;\n    if (bot.entity && !Number.isFinite(bot.entity.yaw)) bot.entity.yaw = 0;\n    if (bot.entity && !Number.isFinite(bot.entity.pitch)) bot.entity.pitch = 0;\n    const dYaw = deltaYaw(bot.entity.yaw, lastSentYaw)"
+      );
+      physModified = true;
+    }
     if (physicsContent.includes("const pitch = Math.fround(conv.toNotchianPitch(lastSentPitch))") &&
         !physicsContent.includes("Math.max(-89.5, Math.min(89.5, Math.fround(conv.toNotchianPitch(lastSentPitch)))")) {
       physicsContent = physicsContent.replace(
@@ -220,19 +234,19 @@ function longToBigInt (arr) {
       physModified = true;
     }
 
-    // D. Clamp bot.look target pitch
+    // D. Clamp bot.look target yaw and pitch
     if (physicsContent.includes("bot.look = async (yaw, pitch, force) => {") &&
-        !physicsContent.includes("pitch = Math.max(-1.50, Math.min(1.50, Number.isFinite(pitch)")) {
+        !physicsContent.includes("yaw = Number.isFinite(yaw) ? yaw")) {
       physicsContent = physicsContent.replace(
         "bot.look = async (yaw, pitch, force) => {",
-        "bot.look = async (yaw, pitch, force) => {\n    pitch = Math.max(-1.50, Math.min(1.50, Number.isFinite(pitch) ? pitch : 0));"
+        "bot.look = async (yaw, pitch, force) => {\n    yaw = Number.isFinite(yaw) ? yaw : (Number.isFinite(bot.entity?.yaw) ? bot.entity.yaw : 0);\n    pitch = Math.max(-1.50, Math.min(1.50, Number.isFinite(pitch) ? pitch : 0));"
       );
       physModified = true;
     }
 
     if (physModified) {
       fs.writeFileSync(physicsJsPath, physicsContent, 'utf8');
-      log('Patched mineflayer lib/plugins/physics.js with strict pitch clamping & teleport_confirm');
+      log('Patched mineflayer lib/plugins/physics.js with strict yaw & pitch validation');
     }
   }
 
