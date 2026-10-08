@@ -1,4 +1,36 @@
 require("dotenv").config();
+const { EventEmitter } = require("events");
+EventEmitter.defaultMaxListeners = 100;
+
+// Cleanly suppress raw socket disconnect stack traces
+process.on("uncaughtException", err => {
+    const msg = err?.message || String(err);
+    if (
+        msg.includes("ECONNRESET") ||
+        msg.includes("EPIPE") ||
+        msg.includes("ETIMEDOUT") ||
+        msg.includes("keepAliveTimeout") ||
+        msg.includes("client timed out") ||
+        msg.includes("KEEPALIVE_TIMEOUT")
+    ) {
+        return;
+    }
+    console.error("[Uncaught Exception]", err);
+});
+
+process.on("unhandledRejection", err => {
+    const msg = err?.message || String(err);
+    if (
+        msg.includes("ECONNRESET") ||
+        msg.includes("EPIPE") ||
+        msg.includes("ETIMEDOUT") ||
+        msg.includes("keepAliveTimeout") ||
+        msg.includes("client timed out")
+    ) {
+        return;
+    }
+});
+
 const http = require("http");
 const fs = require("fs");
 const path = require("path");
@@ -762,9 +794,17 @@ function createBotSession(target, startDelayMs = 0) {
     }
 
     bot = mineflayer.createBot(botOptions);
+    bot.setMaxListeners(0);
 
     // Robust network packet normalizer & error silencer
     if (bot._client) {
+        bot._client.setMaxListeners(0);
+        bot._client.on("connect", () => {
+            if (bot._client && bot._client.socket) {
+                bot._client.socket.setMaxListeners(0);
+                bot._client.socket.on("error", () => {});
+            }
+        });
         const origClientWrite = bot._client.write.bind(bot._client);
         bot._client.write = function (name, params) {
             // Completely drop all chat packets to guarantee absolute silence
@@ -1027,10 +1067,17 @@ function createBotSession(target, startDelayMs = 0) {
         const msg = err.message || "";
         if (
             msg.includes("0x85") ||
+            msg.includes("0x30") ||
             msg.includes("packet_advancements") ||
             msg.includes("advancements") ||
+            msg.includes("world_particles") ||
             msg.includes("array size is abnormally large") ||
-            msg.includes("Read error for")
+            msg.includes("Read error for") ||
+            msg.includes("ECONNRESET") ||
+            msg.includes("client timed out") ||
+            msg.includes("KEEPALIVE_TIMEOUT") ||
+            msg.includes("ETIMEDOUT") ||
+            msg.includes("EPIPE")
         )
             return;
         console.error(`[Bot Error] [${serverTag}] ${msg}`);
@@ -2346,13 +2393,17 @@ async function sprintToBedAndSleep() {
                 bedSprintInterval = null;
             }
             bot.clearControlStates();
-            try {
-                await bot.sleep(bed);
-            } catch (err) {
+            isSprintingToBed = false;
+            if (!isTryingToSleep && !bot.isSleeping) {
+                isTryingToSleep = true;
                 lastSleepAttempt = Date.now();
-                if (!bot.isSleeping) startMovementLoop();
-            } finally {
-                isSprintingToBed = false;
+                try {
+                    await bot.sleep(bed);
+                } catch (err) {
+                    if (!bot.isSleeping) startMovementLoop();
+                } finally {
+                    isTryingToSleep = false;
+                }
             }
             return;
         }
@@ -2388,9 +2439,15 @@ async function sprintToBedAndSleep() {
             bot.clearControlStates();
             isSprintingToBed = false;
             lastSleepAttempt = Date.now();
-            try {
-                await bot.sleep(bed);
-            } catch (_) {}
+            if (!isTryingToSleep && !bot.isSleeping) {
+                isTryingToSleep = true;
+                try {
+                    await bot.sleep(bed);
+                } catch (_) {}
+                finally {
+                    isTryingToSleep = false;
+                }
+            }
             if (!bot.isSleeping) startMovementLoop();
         }
     }, 100);
