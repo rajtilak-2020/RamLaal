@@ -16,7 +16,7 @@ const config = {
   version: process.env.MC_VERSION || '26.3', // 26.3 for latest server update
   auth: process.env.MC_AUTH || 'offline',    // 'offline' for cracked Aternos servers
   reconnectDelay: parseInt(process.env.RECONNECT_DELAY_MS, 10) || 15000,
-  httpPort: process.env.PORT || 3000,
+  httpPort: parseInt(process.env.SERVER_PORT || process.env.PORT, 10) || 3000,
   isMuted: true, // Completely muted per user request
   viewDistance: parseInt(process.env.VIEW_DISTANCE, 10) || 32 // Maximize render and simulation distance (32 chunks = 512m radius)
 };
@@ -525,19 +525,86 @@ const baseDeathObserverRoasts = [
 ];
 const allDeathObserverRoasts = [...baseDeathObserverRoasts, ...customDeathMessages];
 
-// Simple HTTP server for hosting platforms (Render, Koyeb, etc.)
+// Simple HTTP server for Bot-Hosting / Pterodactyl / edge proxies
 const server = http.createServer((req, res) => {
-  res.writeHead(200, { 'Content-Type': 'application/json' });
-  res.end(JSON.stringify({
-    status: 'online',
-    bot: config.username,
-    server: `${config.host}:${config.port}`,
-    ai: 'RamLaal-GPT v2.0 Active'
-  }));
+  if (req.url === '/health' || req.headers['accept']?.includes('application/json')) {
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    return res.end(JSON.stringify({
+      status: 'online',
+      bot: config.username,
+      server: `${config.host}:${config.port}`,
+      mcVersion: config.version,
+      health: bot?.health ?? 20,
+      position: bot?.entity?.position ? bot.entity.position.floored() : null,
+      uptime: Math.floor(process.uptime()),
+      viewDistance: config.viewDistance
+    }));
+  }
+
+  res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+  res.end(`<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>${config.username} - Minecraft Bot</title>
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #0f172a; color: #f8fafc; display: flex; align-items: center; justify-content: center; min-height: 100vh; margin: 0; padding: 20px; box-sizing: border-box; }
+    .card { background: #1e293b; border: 1px solid #334155; border-radius: 16px; padding: 32px; max-width: 500px; width: 100%; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.5); }
+    .header { display: flex; align-items: center; gap: 16px; margin-bottom: 20px; }
+    .avatar { width: 52px; height: 52px; border-radius: 12px; background: #3b82f6; display: flex; align-items: center; justify-content: center; font-size: 26px; }
+    .title { margin: 0; font-size: 22px; font-weight: 700; color: #fff; }
+    .subtitle { margin: 4px 0 0; color: #94a3b8; font-size: 13px; }
+    .status-badge { display: inline-flex; align-items: center; gap: 8px; background: #064e3b; color: #34d399; padding: 6px 14px; border-radius: 9999px; font-weight: 600; font-size: 13px; margin-bottom: 20px; }
+    .status-dot { width: 8px; height: 8px; border-radius: 50%; background: #10b981; box-shadow: 0 0 10px #10b981; }
+    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 20px; }
+    .stat { background: #0f172a; padding: 12px; border-radius: 8px; border: 1px solid #334155; }
+    .stat-label { font-size: 11px; color: #64748b; text-transform: uppercase; font-weight: 600; }
+    .stat-val { font-size: 15px; font-weight: 600; color: #f1f5f9; margin-top: 4px; }
+    .footer { text-align: center; color: #64748b; font-size: 12px; border-top: 1px solid #334155; padding-top: 16px; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="header">
+      <div class="avatar">🤖</div>
+      <div>
+        <h1 class="title">${config.username}</h1>
+        <p class="subtitle">Minecraft ${config.version} AFK Bot</p>
+      </div>
+    </div>
+    <div class="status-badge">
+      <span class="status-dot"></span>
+      <span>${bot && bot.entity ? 'ONLINE & ACTIVE' : 'RUNNING / CONNECTING'}</span>
+    </div>
+    <div class="grid">
+      <div class="stat">
+        <div class="stat-label">Target Server</div>
+        <div class="stat-val">${config.host}:${config.port}</div>
+      </div>
+      <div class="stat">
+        <div class="stat-label">Simulation</div>
+        <div class="stat-val">${config.viewDistance} Chunks</div>
+      </div>
+      <div class="stat">
+        <div class="stat-label">Uptime</div>
+        <div class="stat-val">${Math.floor(process.uptime())}s</div>
+      </div>
+      <div class="stat">
+        <div class="stat-label">Port</div>
+        <div class="stat-val">${config.httpPort}</div>
+      </div>
+    </div>
+    <div class="footer">
+      Powered by RamLaal Core • mc-bot.krajtilak.in
+    </div>
+  </div>
+</body>
+</html>`);
 });
 
-server.listen(config.httpPort, () => {
-  console.log(`[Web Server] Listening on port ${config.httpPort}`);
+server.listen(config.httpPort, '0.0.0.0', () => {
+  console.log(`[Web Server] Listening on 0.0.0.0:${config.httpPort}`);
 });
 
 let bot = null;
