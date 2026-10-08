@@ -17,7 +17,7 @@ const config = {
   auth: process.env.MC_AUTH || 'offline',    // 'offline' for cracked Aternos servers
   reconnectDelay: parseInt(process.env.RECONNECT_DELAY_MS, 10) || 15000,
   httpPort: process.env.PORT || 3000,
-  isMuted: process.env.MUTED === 'true'
+  isMuted: true // Completely muted per user request
 };
 
 // ==========================================
@@ -556,7 +556,7 @@ let lastArmorEquipChat = 0;
 let lastEatChat = 0;
 let lastDeathRoast = 0;
 let proximityCooldowns = {};
-let isMuted = config.isMuted;
+let isMuted = true; // Permanently muted per user request
 
 // Base Anchor & Aggressive Combat Guard Range
 let baseAnchor = null;
@@ -574,22 +574,10 @@ let hasClearedChestToday = false;
 let isDepositingChest = false;
 let bedSprintInterval = null;
 
-// Central Safe Chat Handler - Strictly respects isMuted state and handles uninitialized bot.chat safely
+// Central Safe Chat Handler - Completely muted per user request
 function safeChat(message, force = false) {
-  if (!bot || !message) return;
-  if (isMuted && !force) {
-    console.log(`[Muted - Chat Suppressed]: ${message}`);
-    return;
-  }
-  try {
-    if (typeof bot.chat === 'function') {
-      bot.chat(message, force);
-    } else {
-      console.warn(`[Chat Notice] Chat not available yet, dropped: ${message}`);
-    }
-  } catch (err) {
-    console.warn(`[Chat Error] ${err.message}`);
-  }
+  // All in-game chat messages are permanently muted
+  return;
 }
 
 function createBot() {
@@ -614,6 +602,10 @@ function createBot() {
   if (bot._client) {
     const origClientWrite = bot._client.write.bind(bot._client);
     bot._client.write = function (name, params) {
+      // Completely drop all chat packets to guarantee absolute silence
+      if (name === 'chat_message' || name === 'chat' || name === 'chat_command') {
+        return;
+      }
       if (name === 'block_place' && params) {
         if (params.insideBlock === undefined) params.insideBlock = false;
         if (params.worldBorderHit === undefined) params.worldBorderHit = false;
@@ -683,19 +675,11 @@ function createBot() {
 
   bot.once('login', () => {
     console.log(`[Bot] Logged into ${config.host}:${config.port} successfully!`);
-    // Safe hook on bot.chat once initialized and available
+    // Completely mute bot.chat permanently
     if (typeof bot.chat === 'function' && !bot._originalChat) {
       bot._originalChat = bot.chat.bind(bot);
       bot.chat = function (msg, force = false) {
-        if (isMuted && !force) {
-          console.log(`[Muted - Chat Suppressed]: ${msg}`);
-          return;
-        }
-        try {
-          bot._originalChat(msg);
-        } catch (err) {
-          console.warn(`[Chat Error] ${err.message}`);
-        }
+        return;
       };
     }
   });
@@ -733,11 +717,6 @@ function createBot() {
       console.log(`[Base Guard] Base spawn anchor locked at: ${baseAnchor.floored()}`);
     }
     startMovementLoop();
-    try {
-      if (!isMuted) {
-        safeChat("RamLaal AI Core Loaded! Namaste sabhi ko 🤖🙏");
-      }
-    } catch (_) {}
   });
 
   // Bed & Sleep Handlers (Sprints to bed ONLY when at least one other player on the server is sleeping)
@@ -838,19 +817,8 @@ function createBot() {
     }
   });
 
-  // Observer AI: Roasts players when someone dies near him (respects mute & cooldown)
-  bot.on('entityDead', (entity) => {
-    if (!bot || !entity || entity === bot.entity || isMuted) return;
-    if (entity.type === 'player' && entity.username) {
-      const now = Date.now();
-      if (now - lastDeathRoast > 45000) {
-        lastDeathRoast = now;
-        try {
-          safeChat(getRandom(allDeathObserverRoasts));
-        } catch (_) {}
-      }
-    }
-  });
+  // Observer AI: Dead entities (chat roasts completely disabled)
+  bot.on('entityDead', (entity) => {});
 
   // Weather Awareness (Silent - no chat spam)
   bot.on('rain', () => {});
@@ -864,9 +832,6 @@ function createBot() {
   bot.on('death', () => {
     console.log('[Bot] Bot died. Respawning...');
     stopMovementLoop();
-    try {
-      if (!isMuted) safeChat(getRandom(deathMessages));
-    } catch (_) {}
     setTimeout(() => {
       if (bot) bot.respawn();
     }, 2000);
@@ -1359,13 +1324,11 @@ async function goToSleep(silent = false) {
   const isThunder = bot.isRaining && (bot.thunderState > 0);
 
   if (!isNight && !isThunder) {
-    if (!silent) safeChat(getRandom(notNightMessages));
     return;
   }
 
   const bed = findNearbyBed();
   if (!bed) {
-    if (!silent) safeChat(getRandom(noBedMessages));
     console.log('[Bed] No bed found within 4 blocks.');
     return;
   }
@@ -1378,7 +1341,6 @@ async function goToSleep(silent = false) {
     console.log('[Bed] RamLaal is now sleeping in bed!');
   } catch (err) {
     console.warn(`[Bed Error] ${err.message}`);
-    if (!silent && !isMuted) safeChat(`Abe so nahi pa raha hu: ${err.message}`);
     if (!bot.isSleeping) {
       startMovementLoop();
     }
@@ -1475,7 +1437,6 @@ async function clearInventoryToChest(silent = false) {
 
     if (!chestBlock) {
       console.log('[Chest Deposit] No chest or barrel found nearby to store items.');
-      if (!silent && !isMuted) safeChat('Bhai paas me koi chest nahi mili saman rakhne ke liye!');
       return;
     }
 
@@ -1526,9 +1487,6 @@ async function clearInventoryToChest(silent = false) {
     } catch (_) {}
 
     console.log(`[Chest Deposit] Morning deposit finished! Transferred ${depositedCount} items to chest.`);
-    if (depositedCount > 0 && !silent && !isMuted) {
-      safeChat(`Subah ho gayi! Maine chest me saara extra saman (${depositedCount} items) daal diya, bas talwar aur armor rakha hai 📦✨`);
-    }
   } catch (err) {
     console.warn(`[Chest Deposit Error] ${err.message}`);
   } finally {
@@ -1885,19 +1843,10 @@ async function checkCombatAndMobs() {
 // ==========================================
 
 
-// Realistic Human Typing Simulation: Pauses naturally based on message length before sending
+// Realistic Human Interaction (Completely silent - chat muted)
 async function humanChat(message, lookAtTarget = null, force = false) {
-  if (!bot || !message) return;
-  if (isMuted && !force) return;
   if (lookAtTarget) lookAtPlayer(lookAtTarget);
-
-  // Realistic human typing delay (400ms to 1800ms)
-  const typingMs = Math.min(1800, Math.max(500, message.length * 25));
-  await sleep(typingMs);
-  if (isMuted && !force) return;
-  try {
-    safeChat(message, force);
-  } catch (_) {}
+  return;
 }
 
 // Organic Human Mouse Movement: Smooth S-curve easing with natural micro-jitters
