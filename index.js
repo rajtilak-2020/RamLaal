@@ -626,11 +626,26 @@ function createBot() {
       }
       // Safety clamp on all movement / rotation packets to prevent invalid_player_movement kicks
       if (params) {
-        if (typeof params.pitch === 'number') {
+        if ('yaw' in params) {
+          params.yaw = Number.isFinite(params.yaw) ? params.yaw : (Number.isFinite(bot.entity?.yaw) ? bot.entity.yaw : 0);
+        }
+        if ('yRot' in params) {
+          params.yRot = Number.isFinite(params.yRot) ? params.yRot : (Number.isFinite(bot.entity?.yaw) ? bot.entity.yaw : 0);
+        }
+        if ('pitch' in params) {
           params.pitch = Math.max(-89.5, Math.min(89.5, Number.isFinite(params.pitch) ? params.pitch : 0));
         }
-        if (typeof params.xRot === 'number') {
+        if ('xRot' in params) {
           params.xRot = Math.max(-89.5, Math.min(89.5, Number.isFinite(params.xRot) ? params.xRot : 0));
+        }
+        if ('x' in params && !Number.isFinite(params.x)) {
+          params.x = Number.isFinite(bot.entity?.position?.x) ? bot.entity.position.x : 0;
+        }
+        if ('y' in params && !Number.isFinite(params.y)) {
+          params.y = Number.isFinite(bot.entity?.position?.y) ? bot.entity.position.y : 0;
+        }
+        if ('z' in params && !Number.isFinite(params.z)) {
+          params.z = Number.isFinite(bot.entity?.position?.z) ? bot.entity.position.z : 0;
         }
       }
       return origClientWrite(name, params);
@@ -652,13 +667,14 @@ function createBot() {
   }
 
   // Wrap bot.look to clamp pitch in radians (strictly [-1.50, 1.50] rad = [-85.9°, 85.9°])
-  // This guarantees no code path ever triggers vanilla invalid_player_movement kicks (|pitch| > 90°)
+  // and guarantee finite yaw to prevent invalid_player_movement kicks
   const hookLook = () => {
     if (bot && typeof bot.look === 'function' && !bot._originalLook) {
       bot._originalLook = bot.look.bind(bot);
       bot.look = async function (yaw, pitch, force) {
+        const safeYaw = Number.isFinite(yaw) ? yaw : (Number.isFinite(bot.entity?.yaw) ? bot.entity.yaw : 0);
         const safePitch = Math.max(-1.50, Math.min(1.50, Number.isFinite(pitch) ? pitch : 0));
-        return bot._originalLook(yaw, safePitch, force);
+        return bot._originalLook(safeYaw, safePitch, force);
       };
     }
   };
@@ -1405,6 +1421,9 @@ function isAnyOtherPlayerSleeping() {
 function checkSleepTrigger() {
   if (!bot || !bot.entity || bot.isSleeping || isSprintingToBed || isDepositingChest) return;
 
+  const now = Date.now();
+  if (now - lastSleepAttempt < 15000) return; // 15-second cooldown to avoid tight loop spam
+
   const isNight = bot.time && (bot.time.timeOfDay >= 12541 && bot.time.timeOfDay <= 23458);
   const isThunder = bot.isRaining && (bot.thunderState > 0);
 
@@ -1986,23 +2005,30 @@ async function sprintToBedAndSleep() {
   if (!bot || !bot.entity || bot.isSleeping || isSprintingToBed) return;
 
   const bed = bot.findBlock({
-    matching: block => bot.isABed(block),
+    matching: block => {
+      if (!bot.isABed(block)) return false;
+      try {
+        if (typeof bot.parseBedMetadata === 'function') {
+          const meta = bot.parseBedMetadata(block);
+          if (meta && meta.occupied) return false;
+        }
+      } catch (_) {}
+      return true;
+    },
     maxDistance: 18
   });
 
   if (!bed) {
     const now = Date.now();
-    if (now - lastSleepAttempt > 30000) {
-      lastSleepAttempt = now;
-      console.log('[Bed] No bed found within 18 blocks.');
-    }
+    lastSleepAttempt = now;
+    console.log('[Bed] No unoccupied bed found within 18 blocks.');
     return;
   }
 
   isSprintingToBed = true;
   stopMovementLoop();
 
-  console.log(`[Bed Rush] Night arrived! Sprinting silently to bed at ${bed.position}...`);
+  console.log(`[Bed Rush] Night arrived & player sleeping! Sprinting to unoccupied bed at ${bed.position}...`);
 
   let ticks = 0;
   const maxSprintTicks = 45; // ~4.5 seconds max
@@ -2036,6 +2062,7 @@ async function sprintToBedAndSleep() {
         console.log('[Bed Rush] Reached bed! Hopping in now...');
         await bot.sleep(bed);
       } catch (err) {
+        lastSleepAttempt = Date.now();
         console.warn(`[Bed Rush Error] ${err.message}`);
         if (!bot.isSleeping) startMovementLoop();
       } finally {
@@ -2070,6 +2097,7 @@ async function sprintToBedAndSleep() {
       }
       bot.clearControlStates();
       isSprintingToBed = false;
+      lastSleepAttempt = Date.now();
       try { await bot.sleep(bed); } catch (_) {}
       if (!bot.isSleeping) startMovementLoop();
     }

@@ -386,11 +386,22 @@ function sizeOfEntityDelta (value) {
   const serializerPath = path.join(__dirname, 'node_modules/minecraft-protocol/src/transforms/serializer.js');
   if (fs.existsSync(serializerPath)) {
     let serContent = fs.readFileSync(serializerPath, 'utf8');
+    let serModified = false;
     if (/if\s*\(\s*(?:e\.partialReadError(?:\s*\|\|\s*packetId\s*===\s*0x85)?)\s*\)\s*\{[\s\S]*?return cb\(\)\s*\}/.test(serContent)) {
       serContent = serContent.replace(
         /if\s*\(\s*(?:e\.partialReadError(?:\s*\|\|\s*packetId\s*===\s*0x85)?)\s*\)\s*\{[\s\S]*?return cb\(\)\s*\}/,
         `if (e.partialReadError || packetId === 0x85 || packetId === 0x30) {\n        return cb()\n      }`
       );
+      serModified = true;
+    }
+    if (serContent.includes("console.log('Chunk size is ' + chunk.length") && !serContent.includes("packet?.data?.name !== 'entity_metadata'")) {
+      serContent = serContent.replace(
+        "if (packet.metadata.size !== chunk.length && !this.noErrorLogging) {",
+        "if (packet.metadata.size !== chunk.length && !this.noErrorLogging && packet?.data?.name !== 'entity_metadata') {"
+      );
+      serModified = true;
+    }
+    if (serModified) {
       fs.writeFileSync(serializerPath, serContent, 'utf8');
       log('Patched minecraft-protocol serializer.js to cleanly drop 0x85 & 0x30 packets without stack trace noise');
     }
