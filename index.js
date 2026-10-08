@@ -11,7 +11,7 @@ try {
 const mineflayer = require("mineflayer");
 
 function parseServerTarget() {
-  let rawHost = (process.env.MC_HOST || 'jhaatgao.falixsrv.me').trim();
+  let rawHost = (process.env.MC_HOST || 'mc.krajtilak.in').trim();
   let port = process.env.MC_PORT ? parseInt(process.env.MC_PORT, 10) : undefined;
 
   if (rawHost.includes(':')) {
@@ -22,9 +22,9 @@ function parseServerTarget() {
     }
   }
 
-  // Default to 25565 so minecraft-protocol's tcpDns handles SRV record resolution
+  // Default port: 35529 for mc.krajtilak.in, or 25565 for standard SRV resolution
   if (!port || isNaN(port)) {
-    port = 25565;
+    port = rawHost === 'mc.krajtilak.in' ? 35529 : 25565;
   }
 
   return { host: rawHost, port };
