@@ -17,7 +17,8 @@ const config = {
   auth: process.env.MC_AUTH || 'offline',    // 'offline' for cracked Aternos servers
   reconnectDelay: parseInt(process.env.RECONNECT_DELAY_MS, 10) || 15000,
   httpPort: process.env.PORT || 3000,
-  isMuted: true // Completely muted per user request
+  isMuted: true, // Completely muted per user request
+  viewDistance: parseInt(process.env.VIEW_DISTANCE, 10) || 32 // Maximize render and simulation distance (32 chunks = 512m radius)
 };
 
 // ==========================================
@@ -589,7 +590,14 @@ function createBot() {
     host: config.host,
     port: config.port,
     username: config.username,
-    auth: config.auth
+    auth: config.auth,
+    viewDistance: config.viewDistance,
+    clientSettings: {
+      viewDistance: config.viewDistance,
+      locale: 'en_us',
+      skinParts: 127,
+      colorsEnabled: true
+    }
   };
 
   if (config.version) {
@@ -605,6 +613,9 @@ function createBot() {
       // Completely drop all chat packets to guarantee absolute silence
       if (name === 'chat_message' || name === 'chat' || name === 'chat_command') {
         return;
+      }
+      if (name === 'settings' && params) {
+        params.viewDistance = config.viewDistance;
       }
       if (name === 'block_place' && params) {
         if (params.insideBlock === undefined) params.insideBlock = false;
@@ -682,6 +693,12 @@ function createBot() {
         return;
       };
     }
+    try {
+      if (typeof bot.setSettings === 'function') {
+        bot.setSettings({ viewDistance: config.viewDistance });
+      }
+    } catch (_) {}
+    console.log(`[Chunk Simulation] Client requested view distance: ${config.viewDistance} chunks. Server view distance cap: ${bot.game.serverViewDistance || 'unknown'} chunks.`);
   });
 
   // Auto-detect when RamLaal is teleported (e.g. /tp) and lock new base anchor

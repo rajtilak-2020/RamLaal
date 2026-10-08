@@ -406,6 +406,38 @@ function sizeOfEntityDelta (value) {
       log('Patched minecraft-protocol serializer.js to cleanly drop 0x85 & 0x30 packets without stack trace noise');
     }
   }
+
+  // 8. Maximize default client viewDistance to 32 chunks for maximum farm & chunk simulation
+  const mcPlayPath = path.join(__dirname, 'node_modules/minecraft-protocol/src/client/play.js');
+  if (fs.existsSync(mcPlayPath)) {
+    let playContent = fs.readFileSync(mcPlayPath, 'utf8');
+    if (playContent.includes("viewDistance: clientSettings.viewDistance ?? 10")) {
+      playContent = playContent.replace(
+        "viewDistance: clientSettings.viewDistance ?? 10",
+        "viewDistance: clientSettings.viewDistance ?? 32"
+      );
+      fs.writeFileSync(mcPlayPath, playContent, 'utf8');
+      log('Patched minecraft-protocol play.js with 32-chunk default viewDistance');
+    }
+  }
+
+  const mfSettingsPath = path.join(__dirname, 'node_modules/mineflayer/lib/plugins/settings.js');
+  if (fs.existsSync(mfSettingsPath)) {
+    let mfSettingsContent = fs.readFileSync(mfSettingsPath, 'utf8');
+    let mfSetModified = false;
+    if (mfSettingsContent.includes("far: 12")) {
+      mfSettingsContent = mfSettingsContent.replace("far: 12", "far: 32");
+      mfSetModified = true;
+    }
+    if (mfSettingsContent.includes("options.viewDistance || 'far'")) {
+      mfSettingsContent = mfSettingsContent.replace("options.viewDistance || 'far'", "options.viewDistance || 32");
+      mfSetModified = true;
+    }
+    if (mfSetModified) {
+      fs.writeFileSync(mfSettingsPath, mfSettingsContent, 'utf8');
+      log('Patched mineflayer lib/plugins/settings.js with 32-chunk viewDistance');
+    }
+  }
 } catch (err) {
   console.warn('[Patch-26.3] Warning during patch verification:', err.message);
 }
