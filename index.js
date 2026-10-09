@@ -64,17 +64,13 @@ function parseServerTargets() {
     serverStrings = rawServers.split(",").map(s => s.trim()).filter(Boolean);
   } else if (process.env.MC_HOST && process.env.MC_HOST.includes(",")) {
     serverStrings = process.env.MC_HOST.split(",").map(s => s.trim()).filter(Boolean);
-  } else if (
-    process.env.MC_HOST &&
-    process.env.MC_HOST.trim() !== "mc.krajtilak.in" &&
-    process.env.MC_HOST.trim() !== "jhaatgao.falixsrv.me"
-  ) {
+  } else if (process.env.MC_HOST) {
     const host = process.env.MC_HOST.trim();
     const port = process.env.MC_PORT ? parseInt(process.env.MC_PORT, 10) : undefined;
     serverStrings = [`${host}${port ? `:${port}` : ""}`];
   } else {
-    // Default: Join BOTH servers simultaneously!
-    serverStrings = ["mc.krajtilak.in:35529", "jhaatgao.falixsrv.me:25565"];
+    // Default: only mc.krajtilak.in:35529!
+    serverStrings = ["mc.krajtilak.in:35529"];
   }
 
   const targets = [];
@@ -90,10 +86,7 @@ function parseServerTargets() {
 
   return targets.length > 0
     ? targets
-    : [
-        { host: "mc.krajtilak.in", port: 35529 },
-        { host: "jhaatgao.falixsrv.me", port: 25565 },
-      ];
+    : [{ host: "mc.krajtilak.in", port: 35529 }];
 }
 
 const serverTargets = parseServerTargets();
@@ -669,7 +662,7 @@ const server = http.createServer((req, res) => {
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>${config.username} - Dual Server AFK Bot</title>
+  <title>${config.username} - Minecraft AFK Bot</title>
   <style>
     body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #0f172a; color: #f8fafc; display: flex; align-items: center; justify-content: center; min-height: 100vh; margin: 0; padding: 20px; box-sizing: border-box; }
     .card { background: #1e293b; border: 1px solid #334155; border-radius: 16px; padding: 28px; max-width: 520px; width: 100%; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.5); }
@@ -692,12 +685,12 @@ const server = http.createServer((req, res) => {
       <div class="avatar">🤖</div>
       <div>
         <h1 class="title">${config.username}</h1>
-        <p class="subtitle">Minecraft ${config.version} • Dual-Server AFK Bot</p>
+        <p class="subtitle">Minecraft ${config.version} • AFK Bot</p>
       </div>
     </div>
     <div class="status-badge">
       <span class="status-dot"></span>
-      <span>${anyOnline ? "ONLINE ON SERVER(S)" : "RUNNING / CONNECTING"}</span>
+      <span>${anyOnline ? "ONLINE & ACTIVE" : "RUNNING / CONNECTING"}</span>
     </div>
     <div style="margin-bottom: 16px;">
       ${serverCardsHtml}
@@ -713,7 +706,7 @@ const server = http.createServer((req, res) => {
       </div>
     </div>
     <div class="footer">
-      Powered by RamLaal Core • Dual Server Mode
+      Powered by RamLaal Core • mc-bot.krajtilak.in
     </div>
   </div>
 </body>
