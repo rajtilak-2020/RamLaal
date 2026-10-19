@@ -244,9 +244,18 @@ function longToBigInt (arr) {
       physModified = true;
     }
 
+    // E. Cancel residual velocity and control states on forced move to avoid wall collision kicks
+    if (!physicsContent.includes("stopResidualMotion() // cancel on forced move")) {
+      physicsContent = physicsContent.replace(
+        "sendPacketPositionAndLook(pos, newYaw, newPitch, bot.entity.onGround)\n\n    shouldUsePhysics = true",
+        "stopResidualMotion() // cancel on forced move\n    if (typeof bot.clearControlStates === 'function') bot.clearControlStates()\n    sendPacketPositionAndLook(pos, newYaw, newPitch, bot.entity.onGround)\n\n    shouldUsePhysics = true"
+      );
+      physModified = true;
+    }
+
     if (physModified) {
       fs.writeFileSync(physicsJsPath, physicsContent, 'utf8');
-      log('Patched mineflayer lib/plugins/physics.js with strict yaw & pitch validation');
+      log('Patched mineflayer lib/plugins/physics.js with strict yaw & pitch validation and forced move stabilization');
     }
   }
 

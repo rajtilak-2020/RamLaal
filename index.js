@@ -745,6 +745,8 @@ function createBotSession(target, startDelayMs = 0) {
     let isFightingMobs = false;
     let isReturningToBase = false;
     let currentCombatTarget = null;
+    let lastForcedMoveTime = 0;
+    let forcedMoveCount = 0;
 
     // Sleeping Player Tracking & Morning Chest Deposit
     const sleepingPlayers = new Set();
@@ -899,11 +901,23 @@ function createBotSession(target, startDelayMs = 0) {
         } catch (_) {}
     });
 
-    // Auto-detect when RamLaal is teleported (e.g. /tp) and lock new base anchor
+    // Auto-detect when RamLaal is teleported (e.g. /tp or server rubberband correction)
     bot.on("forcedMove", () => {
-        if (bot && bot.entity) {
-            baseAnchor = bot.entity.position.clone();
+        forcedMoveCount++;
+        lastForcedMoveTime = Date.now();
+        if (bot) {
+            try {
+                bot.clearControlStates();
+                if (bot.entity?.velocity) {
+                    bot.entity.velocity.set(0, 0, 0);
+                }
+            } catch (_) {}
+            if (bot.entity && !baseAnchor) {
+                baseAnchor = bot.entity.position.clone();
+            }
         }
+        isReturningToBase = false;
+        isFightingMobs = false;
     });
 
     // Human Habit: Curious Block Placement / Building Inspection (Silent nod)
@@ -926,10 +940,13 @@ function createBotSession(target, startDelayMs = 0) {
 
     bot.on("spawn", () => {
         console.log(`[Bot] Spawned in the world (${serverTag}).`);
-        if (bot && bot.entity && !baseAnchor) {
-            baseAnchor = bot.entity.position.clone();
-        }
-        startMovementLoop();
+        setTimeout(() => {
+            if (!bot || !bot.entity) return;
+            if (!baseAnchor) {
+                baseAnchor = bot.entity.position.clone();
+            }
+            startMovementLoop();
+        }, 2500);
     });
 
     // Bed & Sleep Handlers (Sprints to bed ONLY when at least one other player on the server is sleeping)
@@ -2254,9 +2271,42 @@ async function smoothLook(targetYaw, targetPitch, steps = 4) {
     }
 }
 
-// Auto-check if front block has a 1-block elevation or wall
+// Scan 8 cardinal and diagonal directions around RamLaal to find an open, safe heading
+function findClearDirection() {
+    if (!bot || !bot.entity) return bot?.entity?.yaw || 0;
+    const currentYaw = bot.entity.yaw;
+    const candidateOffsets = [
+        Math.PI * 0.5,
+        -Math.PI * 0.5,
+        Math.PI * 0.25,
+        -Math.PI * 0.25,
+        Math.PI * 0.75,
+        -Math.PI * 0.75,
+        Math.PI
+    ];
+
+    for (const offset of candidateOffsets) {
+        const testYaw = currentYaw + offset;
+        const dx = -Math.sin(testYaw) * 1.2;
+        const dz = -Math.cos(testYaw) * 1.2;
+        const feet = bot.blockAt(bot.entity.position.offset(dx, 0, dz));
+        const head = bot.blockAt(bot.entity.position.offset(dx, 1, dz));
+        const ground = bot.blockAt(bot.entity.position.offset(dx, -1, dz));
+
+        const feetClear = !feet || feet.boundingBox !== "block";
+        const headClear = !head || head.boundingBox !== "block";
+        const groundSolid = ground && ground.boundingBox === "block";
+
+        if (feetClear && headClear && groundSolid) {
+            return testYaw;
+        }
+    }
+    return currentYaw + Math.PI; // default 180° turnaround
+}
+
+// Auto-check if front path has a wall, drop, or active horizontal collision
 function checkObstacleAhead() {
-    if (!bot || !bot.entity) return { isStep: false, isWall: false, isDrop: false };
+    if (!bot || !bot.entity) return { isStep: false, isWall: false, isDrop: false, isBlocked: true };
     const yaw = bot.entity.yaw;
     const dx = -Math.sin(yaw) * 0.9;
     const dz = -Math.cos(yaw) * 0.9;
@@ -2266,69 +2316,55 @@ function checkObstacleAhead() {
     const groundBlock = bot.blockAt(bot.entity.position.offset(dx, -1, dz));
     const deepGroundBlock = bot.blockAt(bot.entity.position.offset(dx, -2, dz));
 
-    const isWall = headBlock && headBlock.boundingBox === "block" && feetBlock && feetBlock.boundingBox === "block";
-    const isStep = feetBlock && feetBlock.boundingBox === "block" && (!headBlock || headBlock.boundingBox !== "block");
+    const isFeetSolid = feetBlock && feetBlock.boundingBox === "block";
+    const isHeadSolid = headBlock && headBlock.boundingBox === "block";
+    const isWall = isFeetSolid || isHeadSolid;
+    const isStep = isFeetSolid && !isHeadSolid;
     const isDrop =
         (!groundBlock || groundBlock.boundingBox === "empty") &&
         (!deepGroundBlock || deepGroundBlock.boundingBox === "empty");
+    const isBlocked = isWall || isDrop || !!bot.entity.isCollidedHorizontally;
 
-    return { isStep, isWall, isDrop };
+    return { isStep, isWall, isDrop, isBlocked };
 }
 
-// Smart forward step with auto-jumping over 1-block steps, cliff avoidance & stuck detection
-async function smartStepForward(durationMs = 700, sprint = false) {
-    if (!bot || !bot.entity || bot.isSleeping) return;
+// Smart forward step with collision detection, tick-level abort, and wall turning
+async function smartStepForward(durationMs = 500, sprint = false) {
+    if (!bot || !bot.entity || bot.isSleeping || Date.now() - lastForcedMoveTime < 1000) return;
 
     const obstacle = checkObstacleAhead();
-    if (obstacle.isDrop) {
-        // Avoid walking off cliffs or deep pits!
-        if (!bot || !bot.entity) return;
-        try {
-            bot.look(bot.entity.yaw + Math.PI * (0.6 + Math.random() * 0.4), 0, true);
-        } catch (_) {}
+    if (obstacle.isBlocked) {
+        // Path ahead is blocked by a wall or cliff! Smoothly pivot to clear heading
+        const clearYaw = findClearDirection();
+        await smoothLook(clearYaw, 0, 3);
         return;
     }
 
-    const startPos = bot.entity.position.clone();
+    const startForcedMoveCount = forcedMoveCount;
     bot.setControlState("forward", true);
     if (sprint) bot.setControlState("sprint", true);
 
-    if (obstacle.isStep) {
-        bot.setControlState("jump", true);
-        setTimeout(() => {
-            if (bot) bot.setControlState("jump", false);
-        }, 300);
-    }
+    const steps = Math.max(1, Math.floor(durationMs / 50));
+    for (let i = 0; i < steps; i++) {
+        await sleep(50);
+        if (!bot || !bot.entity || bot.isSleeping || forcedMoveCount !== startForcedMoveCount) {
+            if (bot) bot.clearControlStates();
+            return;
+        }
 
-    await sleep(durationMs);
-    if (!bot || !bot.entity) return;
-    bot.setControlState("forward", false);
-    bot.setControlState("sprint", false);
-    bot.setControlState("jump", false);
-
-    const movedDist = startPos.distanceTo(bot.entity.position);
-
-    // If stuck against a wall
-    if (movedDist < 0.15) {
-        // Try hop
-        if (!bot || !bot.entity) return;
-        bot.setControlState("jump", true);
-        bot.setControlState("forward", true);
-        await sleep(300);
-        if (!bot || !bot.entity) return;
-        bot.setControlState("jump", false);
-        bot.setControlState("forward", false);
-
-        if (startPos.distanceTo(bot.entity.position) < 0.25) {
-            // Step backward and turn away from wall
+        // If horizontal collision detected mid-stride, abort immediately and back off
+        if (bot.entity.isCollidedHorizontally) {
+            bot.clearControlStates();
             bot.setControlState("back", true);
-            await sleep(350);
-            if (!bot || !bot.entity) return;
-            bot.setControlState("back", false);
-            const turnAngle = Math.PI * 0.5 + Math.random() * Math.PI * 0.5;
-            await smoothLook(bot.entity.yaw + turnAngle, 0, 2);
+            await sleep(150);
+            if (bot) bot.clearControlStates();
+            const clearYaw = findClearDirection();
+            await smoothLook(clearYaw, 0, 3);
+            return;
         }
     }
+
+    if (bot) bot.clearControlStates();
 }
 
 // 🛌 FAST BED SPRINT: Sprints at full speed to bed the exact millisecond night starts
@@ -2528,49 +2564,36 @@ function startMovementLoop() {
             // 3. REALISTIC LIVING HUMAN WALKING STYLES & PATROL
             const styleRoll = Math.random();
 
-            if (styleRoll < 0.3) {
-                // STYLE 1: Casual Stroll with Natural Head Sway
+            if (styleRoll < 0.25) {
+                // STYLE 1: Casual Stroll (Only in verified open direction)
                 if (!bot || !bot.entity) return;
-                const angleOffset = (Math.random() - 0.5) * Math.PI * 0.7;
-                await smoothLook(bot.entity.yaw + angleOffset, (Math.random() - 0.5) * 0.15, 3);
-                await smartStepForward(750, false);
-            } else if (styleRoll < 0.5) {
-                // STYLE 2: Curious Inspector (Inspects ground/flowers, pitches head down 30°, crouches)
+                const clearYaw = findClearDirection();
+                await smoothLook(clearYaw, (Math.random() - 0.5) * 0.15, 3);
+                await smartStepForward(400, false);
+            } else if (styleRoll < 0.45) {
+                // STYLE 2: Curious Inspector (Inspects ground/flowers, pitches head down, crouches)
                 if (!bot || !bot.entity) return;
-                const groundAngle = (Math.random() - 0.5) * Math.PI * 0.5;
-                await smoothLook(bot.entity.yaw + groundAngle, 0.45, 3); // look down at ground
-                await smartStepForward(500, false);
+                const groundAngle = (Math.random() - 0.5) * Math.PI * 0.4;
+                await smoothLook(bot.entity.yaw + groundAngle, 0.40, 3); // look down at ground
                 if (bot) bot.setControlState("sneak", true);
-                await sleep(400);
+                await sleep(350);
                 if (bot) bot.setControlState("sneak", false);
-            } else if (styleRoll < 0.65) {
-                // STYLE 3: Playful Jog & Bunny-Hop (Quick human sprint burst with hop)
+            } else if (styleRoll < 0.75) {
+                // STYLE 3: Base Lookout (Slowly scans the horizon and sky like a vigilant guard)
                 if (!bot || !bot.entity) return;
-                const forwardAngle = (Math.random() - 0.5) * Math.PI * 0.3;
-                await smoothLook(bot.entity.yaw + forwardAngle, -0.1, 2);
-                if (bot) {
-                    bot.setControlState("jump", true);
-                    setTimeout(() => {
-                        if (bot && bot.entity) bot.setControlState("jump", false);
-                    }, 200);
-                }
-                await smartStepForward(600, true); // sprint forward with jump
-            } else if (styleRoll < 0.82) {
-                // STYLE 4: Base Lookout (Slowly scans the horizon and sky like a guard)
-                if (!bot || !bot.entity) return;
-                const targetYaw = bot.entity.yaw + (Math.random() > 0.5 ? 1.0 : -1.0) * (Math.PI * 0.6);
-                const skyPitch = (Math.random() - 0.5) * 0.35;
-                await smoothLook(targetYaw, skyPitch, 5);
-                await sleep(700);
+                const targetYaw = bot.entity.yaw + (Math.random() > 0.5 ? 1.0 : -1.0) * (Math.PI * 0.4);
+                const skyPitch = (Math.random() - 0.5) * 0.30;
+                await smoothLook(targetYaw, skyPitch, 4);
+                await sleep(600);
             } else {
-                // STYLE 5: Player Watcher (Glances naturally at nearest friend)
+                // STYLE 4: Player Watcher (Glances naturally at nearest friend)
                 const players = Object.values(bot.players).filter(p => p && p.entity && p.username !== bot.username);
                 if (players.length > 0) {
                     const nearestPlayer = players[0];
                     lookAtPlayer(nearestPlayer.username);
                     await sleep(600);
                 } else {
-                    await sleep(500);
+                    await sleep(400);
                 }
             }
         } catch (_) {}
